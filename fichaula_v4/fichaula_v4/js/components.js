@@ -43,7 +43,7 @@ function renderNav(activeLink = '', enPages = true) {
 
   // User chip con avatar + nombre + rol
   const userChip = user
-    ? `<div class="user-chip">
+    ? `<div class="user-chip" id="user-menu-trigger">
          <div class="user-chip-avatar">${(user.nombre[0] + user.apellido[0]).toUpperCase()}</div>
          <div class="user-chip-text">
            <span class="user-chip-name">${user.nombre} ${user.apellido}</span>
@@ -67,6 +67,7 @@ function renderNav(activeLink = '', enPages = true) {
       </div>
     </nav>
   `;
+  setupDropdownToggle();
 }
 
 /**
@@ -79,6 +80,29 @@ function renderFooter() {
     <div class="footer-logo">Ficha<span>ula</span></div>
     <div class="footer-copy">© 2026 Fichaula — Sistema de gestión escolar</div>
   `;
+}
+
+function setupDropdownToggle() {
+  const dropdown = document.querySelector('.dropdown');
+  if (!dropdown || dropdown.dataset.dropdownSetup === 'true') return;
+  dropdown.dataset.dropdownSetup = 'true';
+
+  const trigger = document.getElementById('user-menu-trigger');
+  const content = dropdown.querySelector('.dropdown-content');
+  if (!trigger || !content) return;
+
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation();
+    dropdown.classList.toggle('show');
+  });
+
+  content.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener('click', () => {
+    dropdown.classList.remove('show');
+  });
 }
 
 // Fijar nav al hacer scroll (compartido)
