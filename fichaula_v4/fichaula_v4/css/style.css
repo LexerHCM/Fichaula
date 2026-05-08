@@ -134,7 +134,7 @@ nav {
     color: var(--white);
 }
 
-.dropdown:hover .dropdown-content { display: block; }
+.dropdown.show .dropdown-content { display: block; }
 .dropdown > a { font-size: 14px; font-weight: 500; }
 
 /* ── BADGE ── */
