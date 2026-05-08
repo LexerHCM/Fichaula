@@ -1,4 +1,4 @@
-# <a class="logo" href="#">Ficha<span>ula</span></a>
+# <a style="font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; color: #ffffff; text-decoration: none;" href="#">Ficha<span style="color: #AFA9EC;">ula</span></a>
 
 ### Sistema de Gestión Escolar
 
@@ -21,3 +21,5 @@ Un sistema web diseñado para profesores y directores que facilita el seguimient
 - Centraliza la comunicación y el historial de alumnos
 - Simplifica el control de datos personales y la gestión de roles
 - Apoya la toma de decisiones con información organizada sobre cada estudiante
+
+**Estilos:** Ver [css/style.css](css/style.css) para los estilos completos del proyecto.
