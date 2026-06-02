@@ -16,7 +16,7 @@
 // ╔══════════════════════════════════════════════════════════╗
 // ║  1. CONFIGURACIÓN — EDITÁ ESTOS DOS VALORES             ║
 // ╚══════════════════════════════════════════════════════════╝
-const SUPABASE_URL = 'https://cbxejlckxkznwvlxgtde.supabase.co/rest/v1/';   // ← reemplazá
+const SUPABASE_URL = 'https://cbxejlckxkznwvlxgtde.supabase.co/rest/v1';   // ← reemplazá
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNieGVqbGNreGt6bnd2bHhndGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTk0MzAsImV4cCI6MjA5Mjk3NTQzMH0.71pmkZ8-SxjDBUK5zOdUELcvrjWKjbXkDFOHn5ol6ag';                        // ← reemplazá
 
 // ─── Cliente liviano (sin SDK, solo fetch) ───────────────────
