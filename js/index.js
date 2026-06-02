@@ -12,7 +12,7 @@
   const user = getUsuarioActual();
   const cont = document.getElementById('hero-btns');
 
-  if (user.rol === 'admin') {
+  if (user.rol === 'admin' || user.rol === 'superadmin') {
     cont.innerHTML = `
       <a href="pages/admin.html" class="btn-primary">Panel de administración</a>
       <a href="pages/clases.html" class="btn-secondary">Ver clases</a>

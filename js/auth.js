@@ -1,13 +1,16 @@
 /**
- * auth.js — Gestión de autenticación y permisos
+ * auth.js — Gestión de autenticación y permisos (versión Supabase)
  * ───────────────────────────────────────────────────────────
  * Maneja:
- *  - Login/logout contra FICHAULA_ADMINS y FICHAULA_PROFESORES
  *  - Sesión (sessionStorage → se pierde al cerrar navegador)
  *  - Guards por rol (requireAuth, requireAdmin)
  *  - Helpers de permisos (puede ver legajo, puede editar, etc.)
  *
- * Depende de: data.js (FICHAULA_ADMINS, FICHAULA_PROFESORES)
+ * La validación de credenciales ahora vive en supabase.js
+ * (validarCredencialesDB). Este archivo solo maneja la SESIÓN
+ * una vez que el usuario ya fue autenticado.
+ *
+ * Roles posibles: 'superadmin' | 'admin' | 'profesor'
  */
 
 /* ============================================================
@@ -20,34 +23,8 @@ const AUTH_STORAGE_KEY = 'fichaula_session';
    ============================================================ */
 
 /**
- * Valida credenciales contra admins Y profesores.
- * Devuelve el usuario encontrado (con su rol) o null.
- * @param {string} email
- * @param {string} password
- * @returns {object|null}
- */
-function validarCredenciales(email, password) {
-  const mail = (email || '').trim().toLowerCase();
-  if (!mail || !password) return null;
-
-  // Primero busco en admins
-  const admin = FICHAULA_ADMINS.find(u =>
-    u.email.toLowerCase() === mail && u.password === password
-  );
-  if (admin) return admin;
-
-  // Después en profesores
-  const profe = FICHAULA_PROFESORES.find(u =>
-    u.email.toLowerCase() === mail && u.password === password
-  );
-  if (profe) return profe;
-
-  return null;
-}
-
-/**
  * Guarda la sesión en sessionStorage (sin la contraseña).
- * @param {object} usuario
+ * @param {object} usuario  objeto devuelto por validarCredencialesDB
  */
 function iniciarSesion(usuario) {
   const payload = {
@@ -58,8 +35,7 @@ function iniciarSesion(usuario) {
     rol: usuario.rol,
     // campos opcionales según rol
     materia: usuario.materia || null,
-    cargo: usuario.cargo || null,
-    cursosAsignados: usuario.cursosAsignados || []
+    cargo: usuario.cargo || null
   };
   sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
 }
@@ -100,7 +76,7 @@ function requireAuth() {
 }
 
 /**
- * Exige que el usuario logueado sea admin.
+ * Exige que el usuario logueado sea admin o superadmin.
  * Si no lo es, lo redirige al index (no al login).
  */
 function requireAdmin() {
@@ -110,7 +86,7 @@ function requireAdmin() {
     window.location.replace(enPages ? 'login.html' : 'pages/login.html');
     return;
   }
-  if (user.rol !== 'admin') {
+  if (user.rol !== 'admin' && user.rol !== 'superadmin') {
     const enPages = window.location.pathname.includes('/pages/');
     window.location.replace(enPages ? '../index.html' : 'index.html');
   }
@@ -121,11 +97,11 @@ function requireAdmin() {
    ============================================================ */
 
 /**
- * @returns {boolean} true si el usuario actual es admin.
+ * @returns {boolean} true si el usuario actual es admin o superadmin.
  */
 function esAdmin() {
   const u = getUsuarioActual();
-  return !!u && u.rol === 'admin';
+  return !!u && (u.rol === 'admin' || u.rol === 'superadmin');
 }
 
 /**
@@ -146,8 +122,7 @@ function puedeVerLegajo() {
 }
 
 /**
- * ¿El usuario actual puede editar datos personales del alumno
- * (nombre, apellido, DNI, legajo, fechaNacimiento)?
+ * ¿El usuario actual puede editar datos personales del alumno?
  * Solo admins.
  * @returns {boolean}
  */
@@ -165,7 +140,7 @@ function puedeGestionarClases() {
 }
 
 /**
- * ¿El usuario actual puede agregar seguimientos (conducta/actitud/nota)?
+ * ¿El usuario actual puede agregar seguimientos?
  * Solo profes — el admin tiene vista de solo lectura.
  * @returns {boolean}
  */
@@ -173,47 +148,12 @@ function puedeAgregarSeguimiento() {
   return esProfesor();
 }
 
-/**
- * ¿El usuario actual tiene acceso al curso con este id?
- * - Admin: siempre sí.
- * - Profesor: solo si el curso está en sus cursosAsignados.
- * @param {string} cursoId
- * @returns {boolean}
- */
-function usuarioTieneAccesoACurso(cursoId) {
-  const user = getUsuarioActual();
-  if (!user) return false;
-  if (user.rol === 'admin') return true;
-  return (user.cursosAsignados || []).includes(cursoId);
-}
-
 /* ============================================================
-   QUERIES FILTRADAS SEGÚN EL USUARIO LOGUEADO
+   NOTA: las consultas de cursos/alumnos (antes getCursosVisibles,
+   usuarioTieneAccesoACurso, etc.) ahora son ASYNC y viven en
+   supabase.js:
+     - getClasesVisiblesDB()
+     - getClasesVisiblesPorNivelDB()
+     - usuarioTieneAccesoAClaseDB()
+     - getAlumnosVisiblesDB()
    ============================================================ */
-
-/**
- * Devuelve los cursos visibles para el usuario actual.
- * - Admin: todos.
- * - Profesor: solo los asignados.
- * @returns {Array}
- */
-function getCursosVisibles() {
-  const user = getUsuarioActual();
-  if (!user) return [];
-  if (user.rol === 'admin') return FICHAULA_DATA.cursos.slice();
-  return FICHAULA_DATA.cursos.filter(c =>
-    (user.cursosAsignados || []).includes(c.id)
-  );
-}
-
-/**
- * Agrupa por nivel los cursos visibles al usuario actual.
- * @returns {object}
- */
-function getCursosVisiblesPorNivel() {
-  return getCursosVisibles().reduce((acc, curso) => {
-    if (!acc[curso.nivel]) acc[curso.nivel] = [];
-    acc[curso.nivel].push(curso);
-    return acc;
-  }, {});
-}

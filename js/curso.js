@@ -1,8 +1,12 @@
 /**
- * curso.js — Detalle de un curso.
+ * curso.js — Detalle de un curso (versión Supabase).
  *  - Tabla de alumnos (sin legajo si es profesor).
  *  - Seguimientos: profe puede agregar, admin solo lee.
  *  - Bloqueo si el curso no está asignado al usuario.
+ *
+ * Datos traídos async desde Supabase mediante supabase.js:
+ *   getClaseByIdDB · usuarioTieneAccesoAClaseDB
+ *   getSeguimientosDeClaseDB · agregarSeguimientoDB · eliminarSeguimientoDB
  */
 (function () {
   'use strict';
@@ -11,7 +15,7 @@
   renderNav('clases', true);
   renderFooter();
 
-  // Botones "Volver a clases" (HTML los tiene sin onclick por modularización)
+  // Botones "Volver a clases"
   const btnBackTop = document.getElementById('btn-back-top');
   const btnBackBot = document.getElementById('btn-back-bottom');
   if (btnBackTop) btnBackTop.addEventListener('click', () => history.back());
@@ -23,67 +27,111 @@
 
   const params = new URLSearchParams(window.location.search);
   const cursoId = params.get('id');
-  const curso = cursoId ? getCursoById(cursoId) : null;
 
-  // Validaciones de acceso
-  if (!curso) {
+  // Variables que se completan cuando llegan los datos
+  let curso = null;
+
+  /* ──────────────────────────────────────────────────────────
+     ARRANQUE: validar acceso y traer la clase desde Supabase
+     ────────────────────────────────────────────────────────── */
+  iniciar();
+
+  async function iniciar() {
+    if (!cursoId) { mostrarCursoNoEncontrado(); return; }
+
+    try {
+      // Acceso + datos de la clase en paralelo
+      const [tieneAcceso, claseData] = await Promise.all([
+        usuarioTieneAccesoAClaseDB(cursoId),
+        getClaseByIdDB(cursoId)
+      ]);
+
+      if (!claseData) { mostrarCursoNoEncontrado(); return; }
+      if (!tieneAcceso) { mostrarAccesoDenegado(claseData); return; }
+
+      curso = claseData;
+      document.title = `${curso.nombre} — Fichaula`;
+
+      renderHeader();
+      configurarTablaAlumnos();
+      renderAlumnos(curso.alumnos);
+      configurarSeguimientos();
+      await refrescarSeguimientos();
+    } catch (err) {
+      console.error('Error al cargar el curso:', err);
+      document.getElementById('curso-header').innerHTML = `
+        <p style="color:var(--white-40);margin-top:16px;">
+          No se pudo cargar el curso. Revisá tu conexión e intentá de nuevo.
+        </p>`;
+    }
+  }
+
+  function mostrarCursoNoEncontrado() {
     document.getElementById('curso-header').innerHTML = `
       <p style="color:var(--white-40);margin-top:16px;">
         Curso no encontrado.
         <a href="clases.html" style="color:var(--violet-light);">Ver todos los cursos</a>.
       </p>`;
-    return;
   }
 
-  if (!usuarioTieneAccesoACurso(cursoId)) {
+  function mostrarAccesoDenegado(claseData) {
     document.getElementById('curso-header').innerHTML = `
       <div class="badge acceso-denegado-badge">ACCESO DENEGADO</div>
-      <h1 class="page-title">Curso <span>${curso.nombre}</span></h1>
+      <h1 class="page-title">Curso <span>${claseData.nombre}</span></h1>
       <p class="page-subtitle" style="margin-top:20px;">
         No tenés asignado este curso.
         <a href="clases.html" style="color:var(--violet-light);">Ver tus clases</a>.
       </p>`;
-    return;
   }
 
-  document.title = `${curso.nombre} — Fichaula`;
+  /* ──────────────────────────────────────────────────────────
+     HEADER DEL CURSO
+     ────────────────────────────────────────────────────────── */
+  function renderHeader() {
+    document.getElementById('curso-header').innerHTML = `
+      <div class="badge">${curso.nivel.toUpperCase()}</div>
+      <h1 class="page-title">Curso <span>${curso.nombre}</span></h1>
+      <div class="page-meta-pills">
+        <span class="meta-pill violet">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
+          ${curso.alumnos.length} alumnos
+        </span>
+        <span class="meta-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Turno ${curso.turno}
+        </span>
+        <span class="meta-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          </svg>
+          Aula ${curso.aula}
+        </span>
+      </div>`;
+  }
 
-  // ── HEADER DEL CURSO ──
-  document.getElementById('curso-header').innerHTML = `
-    <div class="badge">${curso.nivel.toUpperCase()}</div>
-    <h1 class="page-title">Curso <span>${curso.nombre}</span></h1>
-    <div class="page-meta-pills">
-      <span class="meta-pill violet">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-        </svg>
-        ${curso.alumnos.length} alumnos
-      </span>
-      <span class="meta-pill">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-        Turno ${curso.turno}
-      </span>
-      <span class="meta-pill">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        </svg>
-        Aula ${curso.aula}
-      </span>
-    </div>`;
+  /* ──────────────────────────────────────────────────────────
+     TABLA DE ALUMNOS
+     ────────────────────────────────────────────────────────── */
+  function configurarTablaAlumnos() {
+    const thead = document.getElementById('thead-row');
+    thead.innerHTML = verLegajo
+      ? `<th>#</th><th>Legajo</th><th>Nombre y Apellido</th><th>Edad</th><th>DNI</th>`
+      : `<th>#</th><th>Nombre y Apellido</th><th>Edad</th>`;
 
-  // ── TABLA DE ALUMNOS ──
-  const thead = document.getElementById('thead-row');
-  thead.innerHTML = verLegajo
-    ? `<th>#</th><th>Legajo</th><th>Nombre y Apellido</th><th>Edad</th><th>DNI</th>`
-    : `<th>#</th><th>Nombre y Apellido</th><th>Edad</th>`;
+    document.getElementById('search-input')
+      .addEventListener('input', e => filtrarAlumnos(e.target.value));
+  }
 
   function iniciales(n, ap) { return (n[0] + ap[0]).toUpperCase(); }
 
   function crearFila(a, i) {
-    const edad = calcularEdad(a.fechaNacimiento);
+    // La vista vista_alumnos_completa ya trae la edad calculada
+    const edad = a.edad != null ? a.edad : '—';
     const nombre = `
       <td>
         <div class="alumno-nombre-cell">
@@ -127,30 +175,28 @@
     renderAlumnos(curso.alumnos.filter(a =>
       a.nombre.toLowerCase().includes(term) ||
       a.apellido.toLowerCase().includes(term) ||
-      (verLegajo && a.legajo.includes(term))
+      (verLegajo && String(a.legajo).includes(term))
     ));
   }
 
-  document.getElementById('search-input').addEventListener('input', e => filtrarAlumnos(e.target.value));
-  renderAlumnos(curso.alumnos);
+  /* ════════════════════════════════════════════════════════
+     SEGUIMIENTOS
+     ════════════════════════════════════════════════════════ */
+  function configurarSeguimientos() {
+    const secSeg = document.getElementById('seguimientos-section');
+    secSeg.style.display = 'block';
 
-  // ════════════════════════════════════════════════════════
-  // SEGUIMIENTOS
-  // ════════════════════════════════════════════════════════
-  const secSeg = document.getElementById('seguimientos-section');
-  secSeg.style.display = 'block';
+    const formWrap = document.getElementById('seg-form-wrapper');
+    const hint = document.getElementById('seguimientos-hint');
 
-  const formWrap = document.getElementById('seg-form-wrapper');
-  const hint = document.getElementById('seguimientos-hint');
+    if (!puedeAgregar) {
+      // Admin: ocultar formulario, ajustar hint
+      formWrap.style.display = 'none';
+      hint.textContent = 'Solo lectura — los seguimientos los cargan los profesores';
+      return;
+    }
 
-  if (!puedeAgregar) {
-    // Admin: ocultar formulario, ajustar hint
-    formWrap.style.display = 'none';
-    hint.textContent = 'Solo lectura — los seguimientos los cargan los profesores';
-  }
-
-  // Poblar select de alumnos (solo si hay form)
-  if (puedeAgregar) {
+    // Poblar select de alumnos
     const sel = document.getElementById('seg-alumno');
     curso.alumnos.forEach(a => {
       const opt = document.createElement('option');
@@ -173,7 +219,6 @@
     });
 
     document.getElementById('btn-agregar-seg').addEventListener('click', agregarSeg);
-
     document.getElementById('seg-texto').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); agregarSeg(); }
     });
@@ -193,22 +238,34 @@
     return `${h}:${m}`;
   }
 
-  function recolectarTodosLosSeguimientos() {
-    const all = [];
-    curso.alumnos.forEach(a => {
-      a.seguimientos.forEach(s => {
-        all.push({ ...s, _legajo: a.legajo, _nombre: a.nombre, _apellido: a.apellido });
-      });
-    });
-    // más nuevos primero
-    return all.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  /**
+   * Trae los seguimientos de la clase desde Supabase y los pinta.
+   */
+  async function refrescarSeguimientos() {
+    const lista = document.getElementById('seguimientos-list');
+    lista.innerHTML = `<div class="seg-empty">Cargando seguimientos...</div>`;
+    try {
+      const todos = await getSeguimientosDeClaseDB(cursoId);
+      renderSeguimientos(todos);
+    } catch (err) {
+      console.error('Error al cargar seguimientos:', err);
+      lista.innerHTML = `<div class="seg-empty">
+        No se pudieron cargar los seguimientos. Revisá tu conexión.
+      </div>`;
+    }
   }
 
-  function renderSeguimientos() {
+  /**
+   * Pinta la lista de seguimientos.
+   * Los datos vienen de la vista vista_seguimientos_completa:
+   *   id, categoria, texto, valor, creado_en,
+   *   alumno_legajo, alumno_nombre, alumno_apellido,
+   *   profesor_id, profesor_nombre, profesor_apellido, materia
+   */
+  function renderSeguimientos(todos) {
     const lista = document.getElementById('seguimientos-list');
-    const todos = recolectarTodosLosSeguimientos();
 
-    if (todos.length === 0) {
+    if (!todos || todos.length === 0) {
       lista.innerHTML = `<div class="seg-empty">
         ${puedeAgregar
           ? 'Todavía no hay seguimientos en esta clase.<br>Agregá el primero usando el formulario de arriba.'
@@ -218,7 +275,7 @@
     }
 
     lista.innerHTML = todos.map(s => {
-      const ini = (s._nombre[0] + s._apellido[0]).toUpperCase();
+      const ini = (s.alumno_nombre[0] + s.alumno_apellido[0]).toUpperCase();
       const catLabel = {
         conducta: 'Conducta', actitud: 'Actitud',
         nota: 'Nota', observacion: 'Observación'
@@ -228,10 +285,10 @@
         ? `<span class="seg-nota-valor">${s.valor}</span>`
         : '';
 
-      // Profe puede borrar solo los suyos; admin puede borrar todo (pero como decisión de UX, en admin no mostramos el botón borrar para no confundir el rol — admin es solo lectura)
-      const puedeBorrar = puedeAgregar && s.autorId === user.id;
+      // El profesor puede borrar solo los suyos
+      const puedeBorrar = puedeAgregar && s.profesor_id === user.id;
       const btnBorrar = puedeBorrar
-        ? `<button class="btn-seg-eliminar" data-legajo="${s._legajo}" data-id="${s.id}" title="Eliminar">
+        ? `<button class="btn-seg-eliminar" data-id="${s.id}" title="Eliminar">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                <polyline points="3 6 5 6 21 6"/>
                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
@@ -239,18 +296,20 @@
            </button>`
         : '';
 
+      const autorNombre = `${s.profesor_nombre} ${s.profesor_apellido}`;
+
       return `<div class="seg-item">
         <span class="seg-cat-badge seg-cat-${s.categoria}">${catLabel}</span>
         <div class="seg-body">
           <div class="seg-top">
             <div class="seg-top-left">
               <div class="alumno-avatar" style="width:28px;height:28px;font-size:10px;">${ini}</div>
-              <span class="seg-alumno">${s._apellido}, ${s._nombre}</span>
+              <span class="seg-alumno">${s.alumno_apellido}, ${s.alumno_nombre}</span>
             </div>
             <span class="seg-meta">
-              <span class="seg-autor">${escapeHtml(s.autorNombre)}</span>
+              <span class="seg-autor">${escapeHtml(autorNombre)}</span>
               <span>·</span>
-              <span>${formatearHora(s.fecha)}</span>
+              <span>${formatearHora(s.creado_en)}</span>
             </span>
           </div>
           <div class="seg-texto">${valorPrefix}${escapeHtml(s.texto)}</div>
@@ -261,17 +320,21 @@
 
     // Listeners de eliminar
     lista.querySelectorAll('.btn-seg-eliminar').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const legajo = btn.dataset.legajo;
-        const id = parseInt(btn.dataset.id, 10);
-        const r = eliminarSeguimiento(cursoId, legajo, id);
-        if (!r.ok) alert(r.error);
-        renderSeguimientos();
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        const r = await eliminarSeguimientoDB(id);
+        if (!r.ok) {
+          alert(r.error);
+          btn.disabled = false;
+          return;
+        }
+        await refrescarSeguimientos();
       });
     });
   }
 
-  function agregarSeg() {
+  async function agregarSeg() {
     const legajo = document.getElementById('seg-alumno').value;
     const categoria = document.getElementById('seg-categoria').value;
     const texto = document.getElementById('seg-texto').value.trim();
@@ -295,7 +358,13 @@
       document.getElementById('seg-texto').style.borderColor = '#E24B4A'; return;
     }
 
-    const r = agregarSeguimiento(cursoId, legajo, { categoria, texto, valor });
+    const btn = document.getElementById('btn-agregar-seg');
+    btn.disabled = true;
+
+    const r = await agregarSeguimientoDB(cursoId, legajo, { categoria, texto, valor });
+
+    btn.disabled = false;
+
     if (!r.ok) {
       alert(r.error);
       return;
@@ -307,8 +376,7 @@
     document.getElementById('seg-categoria').value = '';
     document.getElementById('seg-alumno').value = '';
     document.getElementById('seg-valor').disabled = true;
-    renderSeguimientos();
-  }
 
-  renderSeguimientos();
+    await refrescarSeguimientos();
+  }
 })();

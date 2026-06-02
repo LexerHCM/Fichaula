@@ -1,12 +1,12 @@
 /**
- * login.js — Lógica de la pantalla de login
+ * login.js — Lógica de la pantalla de login (versión Supabase)
  * ───────────────────────────────────────────────────────────
- * Valida credenciales contra admins Y profesores.
+ * Valida credenciales contra Supabase (superadmins, admins, profesores).
  * Redirige según el rol:
- *   admin    → pages/admin.html
- *   profesor → ../index.html
+ *   superadmin / admin → pages/admin.html
+ *   profesor           → ../index.html
  *
- * Depende de: data.js, auth.js
+ * Depende de: supabase.js, auth.js
  */
 
 (function () {
@@ -15,8 +15,10 @@
   // Si ya hay sesión activa, redirigir directamente.
   const actual = getUsuarioActual();
   if (actual) {
-    if (actual.rol === 'admin') window.location.replace('admin.html');
-    else                         window.location.replace('../index.html');
+    if (actual.rol === 'admin' || actual.rol === 'superadmin')
+      window.location.replace('admin.html');
+    else
+      window.location.replace('../index.html');
     return;
   }
 
@@ -48,7 +50,7 @@
     passInput.classList.remove('input-error');
   }
 
-  function intentarLogin() {
+  async function intentarLogin() {
     const email = emailInput.value.trim().toLowerCase();
     const pass  = passInput.value;
 
@@ -57,21 +59,29 @@
     if (!email) { mostrarError('Ingresá tu correo electrónico.'); return; }
     if (!pass)  { mostrarError('Ingresá tu contraseña.'); return; }
 
-    const user = validarCredenciales(email, pass);
+    // Feedback visual mientras consulta la base de datos
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Verificando...';
+
+    const user = await validarCredencialesDB(email, pass);
+
     if (!user) {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Ingresar';
       mostrarError('Correo o contraseña incorrectos. Intentá de nuevo.');
       return;
     }
 
     // Login correcto
-    btnLogin.disabled = true;
     btnLogin.textContent = 'Ingresando...';
     iniciarSesion(user);
 
     // Redirección según rol (pequeño delay para feedback visual)
     setTimeout(() => {
-      if (user.rol === 'admin') window.location.replace('admin.html');
-      else                       window.location.replace('../index.html');
+      if (user.rol === 'admin' || user.rol === 'superadmin')
+        window.location.replace('admin.html');
+      else
+        window.location.replace('../index.html');
     }, 500);
   }
 

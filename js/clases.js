@@ -1,7 +1,10 @@
 /**
  * clases.js — Render de la grilla de cursos visibles al usuario.
- *  - Admin: ve todos los cursos
+ *  - Admin / superadmin: ve todos los cursos
  *  - Profesor: solo los asignados a su cuenta
+ *
+ * Versión Supabase: los datos se traen async desde la base de datos.
+ * Depende de: supabase.js, auth.js, components.js
  */
 (function () {
   'use strict';
@@ -14,20 +17,19 @@
 
   // Subtítulo personalizado
   const sub = document.getElementById('page-subtitle');
-  if (user.rol === 'admin') {
+  if (user.rol === 'admin' || user.rol === 'superadmin') {
     sub.textContent = 'Todos los cursos del establecimiento. Hacé clic en uno para ver sus alumnos.';
   } else {
     sub.textContent = `Cursos asignados a ${user.nombre} ${user.apellido} — ${user.materia}`;
   }
 
-  function renderCursos() {
-    const container = document.getElementById('cursos-container');
-    const grupos = getCursosVisiblesPorNivel();
+  const container = document.getElementById('cursos-container');
 
-    if (Object.keys(grupos).length === 0) {
+  function renderCursos(grupos) {
+    if (!grupos || Object.keys(grupos).length === 0) {
       container.innerHTML = `
         <div class="seg-empty" style="max-width:520px;margin:40px auto;">
-          ${user.rol === 'admin'
+          ${(user.rol === 'admin' || user.rol === 'superadmin')
               ? 'No hay clases creadas todavía.'
               : 'Todavía no tenés cursos asignados.<br>Contactá al administrador.'}
         </div>`;
@@ -45,6 +47,10 @@
 
       cursos.forEach(curso => {
         delay += 40;
+        // La cantidad de alumnos puede no venir; si falta, se muestra "—"
+        const cantAlumnos = (curso.alumnos && curso.alumnos.length != null)
+          ? curso.alumnos.length
+          : '—';
         html += `
           <a href="curso.html?id=${curso.id}"
              class="curso-card"
@@ -68,7 +74,7 @@
               </div>
             </div>
             <div class="curso-alumnos-count">
-              <span class="count-badge">${curso.alumnos.length}</span>
+              <span class="count-badge">${cantAlumnos}</span>
               alumnos inscriptos
             </div>
           </a>`;
@@ -78,5 +84,17 @@
     container.innerHTML = html;
   }
 
-  renderCursos();
+  // Estado de carga inicial
+  container.innerHTML = `<div class="seg-empty" style="margin:40px auto;">Cargando cursos...</div>`;
+
+  // Traer los datos desde Supabase
+  getClasesVisiblesPorNivelDB()
+    .then(grupos => renderCursos(grupos))
+    .catch(err => {
+      console.error('Error al cargar cursos:', err);
+      container.innerHTML = `
+        <div class="seg-empty" style="max-width:520px;margin:40px auto;">
+          No se pudieron cargar los cursos.<br>Revisá tu conexión e intentá de nuevo.
+        </div>`;
+    });
 })();
