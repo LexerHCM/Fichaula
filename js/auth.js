@@ -1,73 +1,63 @@
 /**
- * auth.js — Gestión de autenticación y permisos (versión Supabase)
- * ───────────────────────────────────────────────────────────
- * Maneja:
- *  - Sesión (sessionStorage → se pierde al cerrar navegador)
- *  - Guards por rol (requireAuth, requireAdmin)
- *  - Helpers de permisos (puede ver legajo, puede editar, etc.)
+ * auth.js — Sesión y permisos (Supabase Auth)
+ * ═══════════════════════════════════════════════════════════
+ * Maneja la SESIÓN del lado del cliente:
+ *   - Cachea el perfil del usuario (id, rol, nombre…) para la UI.
+ *   - Los tokens (access/refresh) los guarda supabase.js.
+ *   - Guards por rol para proteger cada página.
  *
- * La validación de credenciales ahora vive en supabase.js
- * (validarCredencialesDB). Este archivo solo maneja la SESIÓN
- * una vez que el usuario ya fue autenticado.
+ * IMPORTANTE: estos chequeos son de UX. La autorización real la
+ * aplica Row Level Security en Supabase con el JWT del usuario.
  *
- * Roles posibles: 'superadmin' | 'admin' | 'profesor'
+ * Roles: 'superadmin' | 'admin' | 'profesor'
+ * Depende de: supabase.js (iniciarSesion guarda el perfil que
+ * devuelve validarCredencialesDB; logoutDB cierra en el servidor).
+ * ═══════════════════════════════════════════════════════════
  */
 
-/* ============================================================
-   CONSTANTES
-   ============================================================ */
-const AUTH_STORAGE_KEY = 'fichaula_session';
-
-/* ============================================================
-   LOGIN / LOGOUT
-   ============================================================ */
+// SB_PERFIL_KEY / SB_ACCESS_KEY / SB_REFRESH_KEY vienen de supabase.js
 
 /**
- * Guarda la sesión en sessionStorage (sin la contraseña).
- * @param {object} usuario  objeto devuelto por validarCredencialesDB
+ * Guarda el perfil del usuario en sessionStorage (sin tokens ni datos
+ * sensibles; los tokens los gestiona supabase.js).
+ * @param {object} perfil  objeto devuelto por validarCredencialesDB
  */
-function iniciarSesion(usuario) {
+function iniciarSesion(perfil) {
   const payload = {
-    id: usuario.id,
-    email: usuario.email,
-    nombre: usuario.nombre,
-    apellido: usuario.apellido,
-    rol: usuario.rol,
-    // campos opcionales según rol
-    materia: usuario.materia || null,
-    cargo: usuario.cargo || null
+    id: perfil.id,
+    email: perfil.email,
+    nombre: perfil.nombre,
+    apellido: perfil.apellido,
+    rol: perfil.rol,
+    materia: perfil.materia || null,
+    cargo: perfil.cargo || null
   };
-  sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
+  sessionStorage.setItem(SB_PERFIL_KEY, JSON.stringify(payload));
 }
 
-/**
- * Cierra sesión y redirige al login.
- */
+/** Cierra sesión (local + Supabase Auth) y vuelve al login. */
 function cerrarSesion() {
-  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  try { if (typeof logoutDB === 'function') logoutDB(); } catch (_) {}
+  sessionStorage.removeItem(SB_PERFIL_KEY);
+  sessionStorage.removeItem(SB_ACCESS_KEY);
+  sessionStorage.removeItem(SB_REFRESH_KEY);
   const enPages = window.location.pathname.includes('/pages/');
   window.location.replace(enPages ? 'login.html' : 'pages/login.html');
 }
 
-/**
- * Devuelve el usuario actualmente logueado (o null).
- * @returns {object|null}
- */
+/** Perfil del usuario logueado (o null). Síncrono, para la UI. */
 function getUsuarioActual() {
-  const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
+  const raw = sessionStorage.getItem(SB_PERFIL_KEY);
   if (!raw) return null;
   try { return JSON.parse(raw); }
-  catch (e) { return null; }
+  catch (_) { return null; }
 }
 
 /* ============================================================
-   GUARDS (para llamar al inicio de cada página)
+   GUARDS
    ============================================================ */
 
-/**
- * Exige que haya un usuario logueado (cualquier rol).
- * Si no lo hay, redirige al login.
- */
+/** Exige sesión activa (cualquier rol). */
 function requireAuth() {
   if (!getUsuarioActual()) {
     const enPages = window.location.pathname.includes('/pages/');
@@ -75,10 +65,7 @@ function requireAuth() {
   }
 }
 
-/**
- * Exige que el usuario logueado sea admin o superadmin.
- * Si no lo es, lo redirige al index (no al login).
- */
+/** Exige rol admin o superadmin. */
 function requireAdmin() {
   const user = getUsuarioActual();
   if (!user) {
@@ -92,68 +79,38 @@ function requireAdmin() {
   }
 }
 
-/* ============================================================
-   HELPERS DE ROL Y PERMISOS
-   ============================================================ */
+/** Exige rol superadmin (gestión de administradores). */
+function requireSuperadmin() {
+  const user = getUsuarioActual();
+  if (!user || user.rol !== 'superadmin') {
+    const enPages = window.location.pathname.includes('/pages/');
+    window.location.replace(enPages ? '../index.html' : 'index.html');
+  }
+}
 
-/**
- * @returns {boolean} true si el usuario actual es admin o superadmin.
- */
+/* ============================================================
+   HELPERS DE ROL
+   ============================================================ */
 function esAdmin() {
   const u = getUsuarioActual();
   return !!u && (u.rol === 'admin' || u.rol === 'superadmin');
 }
-
-/**
- * @returns {boolean} true si el usuario actual es profesor.
- */
+function esSuperadmin() {
+  const u = getUsuarioActual();
+  return !!u && u.rol === 'superadmin';
+}
 function esProfesor() {
   const u = getUsuarioActual();
   return !!u && u.rol === 'profesor';
 }
 
-/**
- * ¿El usuario actual puede ver el legajo/ID del alumno?
- * Solo admins. (Regla del sprint: profes NO ven legajo.)
- * @returns {boolean}
- */
-function puedeVerLegajo() {
-  return esAdmin();
-}
-
-/**
- * ¿El usuario actual puede editar datos personales del alumno?
- * Solo admins.
- * @returns {boolean}
- */
-function puedeEditarAlumno() {
-  return esAdmin();
-}
-
-/**
- * ¿El usuario actual puede crear/borrar/modificar clases?
- * Solo admins.
- * @returns {boolean}
- */
-function puedeGestionarClases() {
-  return esAdmin();
-}
-
-/**
- * ¿El usuario actual puede agregar seguimientos?
- * Solo profes — el admin tiene vista de solo lectura.
- * @returns {boolean}
- */
-function puedeAgregarSeguimiento() {
-  return esProfesor();
-}
-
-/* ============================================================
-   NOTA: las consultas de cursos/alumnos (antes getCursosVisibles,
-   usuarioTieneAccesoACurso, etc.) ahora son ASYNC y viven en
-   supabase.js:
-     - getClasesVisiblesDB()
-     - getClasesVisiblesPorNivelDB()
-     - usuarioTieneAccesoAClaseDB()
-     - getAlumnosVisiblesDB()
-   ============================================================ */
+/** Solo admin/superadmin ven el legajo. */
+function puedeVerLegajo()        { return esAdmin(); }
+/** Solo admin/superadmin editan datos del alumno. */
+function puedeEditarAlumno()     { return esAdmin(); }
+/** Solo admin/superadmin gestionan clases. */
+function puedeGestionarClases()  { return esAdmin(); }
+/** Solo profesores cargan seguimientos. */
+function puedeAgregarSeguimiento() { return esProfesor(); }
+/** Solo profesores dejan comentarios. */
+function puedeComentar()         { return esProfesor(); }

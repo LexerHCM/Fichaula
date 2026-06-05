@@ -1,16 +1,14 @@
 /**
- * components.js — Componentes reutilizables de UI
+ * components.js — Componentes reutilizables de UI (nav y footer)
  * ───────────────────────────────────────────────────────────
- * Nav y footer para todas las páginas autenticadas.
- * El nav se adapta según el rol del usuario:
- *   - Admin    → muestra link "ADMIN" al panel
- *   - Profesor → muestra links "ALUMNOS" y "CLASES"
- *
+ * El nav se adapta al rol:
+ *   - admin / superadmin → link "PANEL ADMIN" + "CLASES"
+ *   - profesor           → "ALUMNOS" + "CLASES"
  * Depende de: auth.js (getUsuarioActual, cerrarSesion)
  */
 
 /**
- * Renderiza el nav en el <header> de la página.
+ * Renderiza el nav en el <header>.
  * @param {string} activeLink - 'alumnos'|'clases'|'admin'|''
  * @param {boolean} enPages   - true si la página está en /pages/
  */
@@ -20,11 +18,11 @@ function renderNav(activeLink = '', enPages = true) {
 
   const base = enPages ? '../' : '';
   const user = getUsuarioActual();
+  const esAdminOSuper = user && (user.rol === 'admin' || user.rol === 'superadmin');
 
-  // Links principales según rol
   let linksPrincipales = '';
   if (user) {
-    if (user.rol === 'admin') {
+    if (esAdminOSuper) {
       linksPrincipales = `
         <a href="${base}pages/admin.html"
            class="${activeLink === 'admin' ? 'active' : ''}">PANEL ADMIN</a>
@@ -41,13 +39,20 @@ function renderNav(activeLink = '', enPages = true) {
     }
   }
 
-  // User chip con avatar + nombre + rol
+  // Etiqueta de rol para el chip de usuario
+  let rolTexto = 'Docente';
+  if (user) {
+    if (user.rol === 'superadmin') rolTexto = 'Superadministrador';
+    else if (user.rol === 'admin') rolTexto = user.cargo || 'Administrador';
+    else rolTexto = user.materia || 'Docente';
+  }
+
   const userChip = user
     ? `<div class="user-chip" id="user-menu-trigger">
          <div class="user-chip-avatar">${(user.nombre[0] + user.apellido[0]).toUpperCase()}</div>
          <div class="user-chip-text">
            <span class="user-chip-name">${user.nombre} ${user.apellido}</span>
-           <span class="user-chip-role">${user.rol === 'admin' ? (user.cargo || 'Administrador') : (user.materia || 'Docente')}</span>
+           <span class="user-chip-role">${rolTexto}</span>
          </div>
        </div>`
     : '<a href="#">v</a>';
@@ -70,9 +75,7 @@ function renderNav(activeLink = '', enPages = true) {
   setupDropdownToggle();
 }
 
-/**
- * Renderiza el footer en el <footer> de la página.
- */
+/** Renderiza el footer en el <footer>. */
 function renderFooter() {
   const footer = document.querySelector('footer');
   if (!footer) return;
@@ -95,14 +98,8 @@ function setupDropdownToggle() {
     event.stopPropagation();
     dropdown.classList.toggle('show');
   });
-
-  content.addEventListener('click', (event) => {
-    event.stopPropagation();
-  });
-
-  document.addEventListener('click', () => {
-    dropdown.classList.remove('show');
-  });
+  content.addEventListener('click', (event) => event.stopPropagation());
+  document.addEventListener('click', () => dropdown.classList.remove('show'));
 }
 
 // Fijar nav al hacer scroll (compartido)

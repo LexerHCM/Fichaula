@@ -1,10 +1,8 @@
 /**
  * alumnos.js — Tabla global de alumnos.
- *  - Admin / superadmin: ven todos los alumnos, todas las columnas.
- *  - Profesor: solo alumnos de sus cursos, sin la columna legajo.
- *
- * Versión Supabase: usa la vista vista_alumnos_completa, que ya
- * devuelve la edad calculada y los datos de la clase.
+ *  - admin / superadmin: todos los alumnos, con legajo y DNI
+ *  - profesor: solo alumnos de sus cursos, sin legajo (lo filtra RLS)
+ * Usa la vista vista_alumnos_completa (trae edad calculada).
  * Depende de: supabase.js, auth.js, components.js
  */
 (function () {
@@ -15,28 +13,23 @@
   renderFooter();
 
   const user = getUsuarioActual();
-  const verLegajo = puedeVerLegajo(); // true solo para admin/superadmin
+  const verLegajo = puedeVerLegajo();
 
-  // Subtítulo
   const sub = document.getElementById('page-subtitle');
-  sub.textContent = (user.rol === 'admin' || user.rol === 'superadmin')
+  sub.textContent = verLegajo
     ? 'Listado completo de alumnos del establecimiento'
     : `Alumnos de los cursos asignados a ${user.nombre} ${user.apellido}`;
 
-  // Construir headers según rol
   const thead = document.getElementById('thead-row');
   thead.innerHTML = verLegajo
     ? `<th>#</th><th>Legajo</th><th>Nombre y Apellido</th><th>Curso</th><th>Turno</th><th>Edad</th><th>DNI</th>`
     : `<th>#</th><th>Nombre y Apellido</th><th>Curso</th><th>Turno</th><th>Edad</th>`;
 
-  // `todos` se llena cuando llegan los datos de Supabase
   let todos = [];
 
   function iniciales(n, ap) { return (n[0] + ap[0]).toUpperCase(); }
 
-  // Construye el nombre legible del curso a partir de la vista
   function nombreCurso(a) {
-    if (a.curso_nombre) return a.curso_nombre;
     if (a.anio != null && a.division) return `${a.anio}° ${a.division}`;
     return a.curso_id || '—';
   }
@@ -53,7 +46,6 @@
     }
 
     tbody.innerHTML = lista.map((a, i) => {
-      // La vista ya trae la edad calculada
       const edad = a.edad != null ? a.edad : '—';
       const cursoNom = nombreCurso(a);
       const nombre = `
@@ -64,8 +56,7 @@
           </div>
         </td>`;
       const curso = `<td><a href="curso.html?id=${a.curso_id}"
-                            style="color:var(--violet-light);text-decoration:none;font-size:13px;">
-                            ${cursoNom}</a></td>`;
+                            style="color:var(--violet-light);text-decoration:none;font-size:13px;">${cursoNom}</a></td>`;
       const turno = `<td style="font-size:13px;color:var(--white-40);">${a.turno}</td>`;
       const edadCell = `<td style="font-size:13px;">${edad} años</td>`;
 
@@ -76,12 +67,11 @@
           ${nombre}${curso}${turno}${edadCell}
           <td style="font-family:'Courier New',monospace;font-size:13px;">${a.dni}</td>
         </tr>`;
-      } else {
-        return `<tr>
-          <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
-          ${nombre}${curso}${turno}${edadCell}
-        </tr>`;
       }
+      return `<tr>
+        <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
+        ${nombre}${curso}${turno}${edadCell}
+      </tr>`;
     }).join('');
   }
 
@@ -96,21 +86,15 @@
     ));
   }
 
-  document.getElementById('search-input')
-    .addEventListener('input', e => filtrar(e.target.value));
+  document.getElementById('search-input').addEventListener('input', e => filtrar(e.target.value));
 
-  // Estado de carga
   document.getElementById('tbody').innerHTML =
     `<tr><td colspan="${verLegajo ? 7 : 5}" class="no-results">Cargando alumnos...</td></tr>`;
 
-  // Traer los datos desde Supabase
   getAlumnosVisiblesDB()
-    .then(lista => {
-      todos = lista;
-      renderTabla(todos);
-    })
+    .then(lista => { todos = lista; renderTabla(todos); })
     .catch(err => {
-      console.error('Error al cargar alumnos:', err);
+      console.error('Error al cargar alumnos:', err.message);
       document.getElementById('tbody').innerHTML =
         `<tr><td colspan="${verLegajo ? 7 : 5}" class="no-results">
            No se pudieron cargar los alumnos. Revisá tu conexión.

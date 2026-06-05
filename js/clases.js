@@ -1,9 +1,7 @@
 /**
- * clases.js — Render de la grilla de cursos visibles al usuario.
- *  - Admin / superadmin: ve todos los cursos
- *  - Profesor: solo los asignados a su cuenta
- *
- * Versión Supabase: los datos se traen async desde la base de datos.
+ * clases.js — Grilla de cursos visibles al usuario.
+ *  - admin / superadmin: todas las clases
+ *  - profesor: solo las asignadas (lo garantiza RLS)
  * Depende de: supabase.js, auth.js, components.js
  */
 (function () {
@@ -14,14 +12,12 @@
   renderFooter();
 
   const user = getUsuarioActual();
+  const esAdminOSuper = user.rol === 'admin' || user.rol === 'superadmin';
 
-  // Subtítulo personalizado
   const sub = document.getElementById('page-subtitle');
-  if (user.rol === 'admin' || user.rol === 'superadmin') {
-    sub.textContent = 'Todos los cursos del establecimiento. Hacé clic en uno para ver sus alumnos.';
-  } else {
-    sub.textContent = `Cursos asignados a ${user.nombre} ${user.apellido} — ${user.materia}`;
-  }
+  sub.textContent = esAdminOSuper
+    ? 'Todos los cursos del establecimiento. Hacé clic en uno para ver sus alumnos.'
+    : `Cursos asignados a ${user.nombre} ${user.apellido} — ${user.materia || ''}`;
 
   const container = document.getElementById('cursos-container');
 
@@ -29,7 +25,7 @@
     if (!grupos || Object.keys(grupos).length === 0) {
       container.innerHTML = `
         <div class="seg-empty" style="max-width:520px;margin:40px auto;">
-          ${(user.rol === 'admin' || user.rol === 'superadmin')
+          ${esAdminOSuper
               ? 'No hay clases creadas todavía.'
               : 'Todavía no tenés cursos asignados.<br>Contactá al administrador.'}
         </div>`;
@@ -38,24 +34,14 @@
 
     let html = '';
     let delay = 0;
-
     for (const [nivel, cursos] of Object.entries(grupos)) {
-      html += `
-        <div class="nivel-group">
-          <div class="nivel-label">${nivel}</div>
-          <div class="cursos-grid">`;
-
+      html += `<div class="nivel-group"><div class="nivel-label">${nivel}</div><div class="cursos-grid">`;
       cursos.forEach(curso => {
         delay += 40;
-        // La cantidad de alumnos puede no venir; si falta, se muestra "—"
-        const cantAlumnos = (curso.alumnos && curso.alumnos.length != null)
-          ? curso.alumnos.length
-          : '—';
+        const cant = (curso.cantAlumnos != null) ? curso.cantAlumnos : '—';
         html += `
-          <a href="curso.html?id=${curso.id}"
-             class="curso-card"
-             style="animation-delay:${delay}ms"
-             title="Ver alumnos de ${curso.nombre}">
+          <a href="curso.html?id=${curso.id}" class="curso-card"
+             style="animation-delay:${delay}ms" title="Ver alumnos de ${curso.nombre}">
             <span class="curso-arrow">↗</span>
             <div class="curso-numero">${curso.nombre}</div>
             <div class="curso-nombre">${curso.nivel}</div>
@@ -74,8 +60,7 @@
               </div>
             </div>
             <div class="curso-alumnos-count">
-              <span class="count-badge">${cantAlumnos}</span>
-              alumnos inscriptos
+              <span class="count-badge">${cant}</span> alumnos inscriptos
             </div>
           </a>`;
       });
@@ -84,14 +69,12 @@
     container.innerHTML = html;
   }
 
-  // Estado de carga inicial
   container.innerHTML = `<div class="seg-empty" style="margin:40px auto;">Cargando cursos...</div>`;
 
-  // Traer los datos desde Supabase
   getClasesVisiblesPorNivelDB()
-    .then(grupos => renderCursos(grupos))
+    .then(renderCursos)
     .catch(err => {
-      console.error('Error al cargar cursos:', err);
+      console.error('Error al cargar cursos:', err.message);
       container.innerHTML = `
         <div class="seg-empty" style="max-width:520px;margin:40px auto;">
           No se pudieron cargar los cursos.<br>Revisá tu conexión e intentá de nuevo.
