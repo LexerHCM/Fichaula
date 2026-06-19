@@ -1,6 +1,6 @@
 /**
- * index.js — Lógica de la página principal
- * Renderiza nav, footer y los botones del hero según el rol.
+ * index.js — Página principal. Botones del hero según el rol.
+ * Depende de: supabase.js, auth.js, components.js
  */
 (function () {
   'use strict';
@@ -11,8 +11,9 @@
 
   const user = getUsuarioActual();
   const cont = document.getElementById('hero-btns');
+  if (!cont || !user) return;
 
-  if (user.rol === 'admin') {
+  if (user.rol === 'admin' || user.rol === 'superadmin') {
     cont.innerHTML = `
       <a href="pages/admin.html" class="btn-primary">Panel de administración</a>
       <a href="pages/clases.html" class="btn-secondary">Ver clases</a>
