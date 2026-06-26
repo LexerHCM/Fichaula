@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FichAula — Gestión de Colegios</title>
+  <link rel="stylesheet" href="../css/superadmin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── Nav ────────────────────────────────────────────────────────────── -->
+  <header class="sa-nav">
+    <div class="sa-nav__left">
+        <span class="sa-logo">
+          <a class="navurl" href="superadmin.html">
+          <span class="sa-logo--white">Fich</span><span class="sa-logo--violet">aula</span>
+        </a></span>
+      
+      <div class="sa-breadcrumb hidden" id="sa-breadcrumb">
+        <span class="sa-breadcrumb__sep">│</span>
+        <button class="sa-breadcrumb__back" id="btn-back">← Colegios</button>
+        <span class="sa-breadcrumb__slash">/</span>
+        <span class="sa-breadcrumb__school" id="breadcrumb-school"></span>
+      </div>
+    </div>
+    <div class="sa-nav__user">
+      <div class="sa-user-avatar">SA</div>
+      <div>
+        <div class="sa-user-name">Sistema FichAula</div>
+        <div class="sa-user-role">Superadministrador</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Layout ─────────────────────────────────────────────────────────── -->
+  <div class="sa-layout">
+
+    <!-- Sidebar -->
+    <aside class="sa-sidebar">
+      <div class="sa-sidebar__header">
+        <div class="sa-sidebar__label">Colegios (<span id="school-count">0</span>)</div>
+        <button class="sa-btn sa-btn--primary sa-btn--full">+ Nuevo colegio</button>
+      </div>
+      <div class="sa-sidebar__list" id="school-list"></div>
+      <div class="sa-sidebar__stats" id="sidebar-stats"></div>
+    </aside>
+
+    <!-- Main -->
+    <main class="sa-main" id="sa-main"></main>
+
+  </div>
+
+  <!-- ── Modal: Crear Directivo ─────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-create">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Crear cuenta de directivo</div>
+      <p class="sa-modal__subtitle" id="modal-create-subtitle"></p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="field-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="field-nombre" placeholder="Juan" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="field-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="field-apellido" placeholder="García" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="field-email">Email institucional</label>
+          <input type="email" class="sa-input" id="field-email" placeholder="directivo@colegio.edu.ar" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="field-password">Contraseña temporal</label>
+          <input type="password" class="sa-input" id="field-password" placeholder="Mínimo 8 caracteres">
+        </div>
+        <div class="sa-modal__info">
+          ℹ Se creará la cuenta en <strong>Supabase Auth</strong> y se insertará el rol
+          <strong>directivo</strong> con el <strong>colegio_id</strong> correspondiente.
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-create-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-create-confirm" disabled>Crear y asignar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirmar Eliminación ───────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-delete">
+    <div class="sa-modal sa-modal--centered">
+      <div class="sa-delete-icon">⚠️</div>
+      <div class="sa-modal__title" id="delete-question"></div>
+      <p class="sa-delete-body">
+        Estás a punto de hacer esto con <strong id="delete-nombre"></strong>.<br>
+        <span class="sa-delete-warn">Esta acción no se puede deshacer.</span>
+      </p>
+      <div class="sa-modal__footer sa-modal__footer--center">
+        <button class="sa-btn sa-btn--secondary" id="btn-delete-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--danger" id="btn-delete-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────────────────────── -->
+  <div class="sa-toast hidden" id="sa-toast"></div>
+
+  <script src="../js/superadmin.js"></script>
+</body>
+</html>
