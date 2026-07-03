@@ -1,35 +1,43 @@
 /**
- * login.js — Pantalla de login (Supabase Auth)
- * ═══════════════════════════════════════════════════════════
- * Autentica vía validarCredencialesDB (Supabase Auth) y redirige
- * según rol. Incluye guard contra envíos múltiples.
- * Depende de: supabase.js, auth.js
+ * login.js — Lógica de la pantalla de login
+ * ───────────────────────────────────────────────────────────
+ * Valida credenciales contra admins Y profesores.
+ * Redirige según el rol:
+ *   admin    → pages/admin.html
+ *   profesor → ../index.html
+ *
+ * Depende de: data.js, auth.js
  */
+
 (function () {
   'use strict';
 
-  // Si ya hay sesión, redirigir directo.
+  // Si ya hay sesión activa, redirigir directamente.
   const actual = getUsuarioActual();
   if (actual) {
-    redirigirPorRol(actual.rol);
+    if (actual.rol === 'admin') window.location.replace('admin.html');
+    else if(actual.rol ==='profesor')                         window.location.replace('../index.html');
+    else window.location.replace('superadmin.html');
     return;
   }
 
-  const card       = document.getElementById('login-card');
-  const errBox     = document.getElementById('error-msg');
-  const errTxt     = document.getElementById('error-text');
-  const emailInput = document.getElementById('email');
-  const passInput  = document.getElementById('password');
-  const btnLogin   = document.getElementById('btn-login');
-  const btnGoogle  = document.getElementById('btn-google');
+  // ── Referencias a elementos ──
+  const card        = document.getElementById('login-card');
+  const errBox      = document.getElementById('error-msg');
+  const errTxt      = document.getElementById('error-text');
+  const emailInput  = document.getElementById('email');
+  const passInput   = document.getElementById('password');
+  const btnLogin    = document.getElementById('btn-login');
+  const btnGoogle   = document.getElementById('btn-google');
 
-  let enviando = false; // guard anti doble-submit
-
+  // ── Funciones auxiliares ──
   function mostrarError(msg) {
     errTxt.textContent = msg;
     errBox.classList.add('visible');
     emailInput.classList.add('input-error');
     passInput.classList.add('input-error');
+
+    // Reinicia la animación shake
     card.classList.remove('shake');
     void card.offsetWidth;
     card.classList.add('shake');
@@ -41,55 +49,45 @@
     passInput.classList.remove('input-error');
   }
 
-  function redirigirPorRol(rol) {
-    if (rol === 'admin' || rol === 'superadmin')
-      window.location.replace('admin.html');
-    else
-      window.location.replace('../index.html');
-  }
-
-  async function intentarLogin() {
-    if (enviando) return;              // ← evita logins concurrentes
+  function intentarLogin() {
     const email = emailInput.value.trim().toLowerCase();
     const pass  = passInput.value;
 
     ocultarError();
+
     if (!email) { mostrarError('Ingresá tu correo electrónico.'); return; }
     if (!pass)  { mostrarError('Ingresá tu contraseña.'); return; }
 
-    enviando = true;
-    btnLogin.disabled = true;
-    btnLogin.textContent = 'Verificando...';
-
-    try {
-      const user = await validarCredencialesDB(email, pass);
-      if (!user) {
-        mostrarError('Correo o contraseña incorrectos. Intentá de nuevo.');
-        return;
-      }
-      btnLogin.textContent = 'Ingresando...';
-      iniciarSesion(user);
-      setTimeout(() => redirigirPorRol(user.rol), 400);
-    } catch (e) {
-      mostrarError('No se pudo conectar. Revisá tu conexión e intentá de nuevo.');
-    } finally {
-      if (enviando) {
-        enviando = false;
-        if (!sessionStorage.getItem(SB_PERFIL_KEY)) {
-          btnLogin.disabled = false;
-          btnLogin.textContent = 'Ingresar';
-        }
-      }
+    const user = validarCredenciales(email, pass);
+    if (!user) {
+      mostrarError('Correo o contraseña incorrectos. Intentá de nuevo.');
+      return;
     }
+
+    // Login correcto
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Ingresando...';
+    iniciarSesion(user);
+
+    // Redirección según rol (pequeño delay para feedback visual)
+    setTimeout(() => {
+      if (user.rol === 'admin') window.location.replace('admin.html');
+      else if (user.rol === 'superadmin') window.location.replace('superadmin.html');
+      else                       window.location.replace('../index.html');
+    }, 500);
   }
 
+  // ── Event listeners ──
   btnLogin.addEventListener('click', intentarLogin);
+
   btnGoogle.addEventListener('click', () => {
     mostrarError('Google no está disponible en este sistema.');
   });
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter') intentarLogin();
   });
+
   emailInput.addEventListener('input', ocultarError);
   passInput.addEventListener('input', ocultarError);
 })();
