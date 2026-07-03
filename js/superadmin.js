@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMain();
   bindNavEvents();
   bindCreateModalEvents();
+  bindCreateAlumnoModalEvents();
+  bindCreateProfesorModalEvents();
+  bindCreateClaseModalEvents();
   bindDeleteModalEvents();
 });
 
@@ -166,7 +169,7 @@ function renderSchoolPanel() {
       <p class="sa-panel-subtitle">Gestioná clases, alumnos, profesores y directivos de este colegio.</p>
 
       <div class="sa-tabs">
-        ${['clases', 'alumnos', 'profesores', 'directivos'].map(t => `
+        ${['clases', 'alumnos', 'profesores', 'directivos', 'opciones'].map(t => `
           <button class="sa-tab-btn ${state.tab === t ? 'active' : ''}" data-tab="${t}">${t}</button>
         `).join('')}
       </div>
@@ -195,6 +198,7 @@ function renderTabContent() {
     case 'alumnos':     renderAlumnos(el);     break;
     case 'profesores':  renderProfesores(el);  break;
     case 'directivos':  renderDirectivos(el);  break;
+    case 'opciones':    renderOpciones(el);    break;
   }
 }
 
@@ -206,7 +210,7 @@ function renderClases(el) {
   el.innerHTML = `
     <div class="sa-toolbar">
       <input class="sa-input sa-input--search" id="search-clases" placeholder="Buscar clase...">
-      <button class="sa-btn sa-btn--primary">+ Nueva clase</button>
+      <button class="sa-btn sa-btn--primary" id="btn-new-clase">+ Nueva clase</button>
     </div>
     <div class="sa-table-wrap">
       <table class="sa-table">
@@ -222,6 +226,8 @@ function renderClases(el) {
   `;
 
   fillClasesRows(state.clases);
+
+  document.getElementById('btn-new-clase')?.addEventListener('click', openCreateClaseModal);
 
   document.getElementById('search-clases').addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
@@ -281,7 +287,7 @@ function renderAlumnos(el) {
   el.innerHTML = `
     <div class="sa-toolbar">
       <input class="sa-input sa-input--search" id="search-alums" placeholder="Buscar alumno...">
-      <button class="sa-btn sa-btn--primary">+ Nuevo alumno</button>
+      <button class="sa-btn sa-btn--primary" id="btn-new-alumno">+ Nuevo alumno</button>
     </div>
     <div class="sa-table-wrap">
       <table class="sa-table">
@@ -292,6 +298,8 @@ function renderAlumnos(el) {
   `;
 
   fillAlumsRows(state.alums);
+
+  document.getElementById('btn-new-alumno')?.addEventListener('click', openCreateAlumnoModal);
 
   document.getElementById('search-alums').addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
@@ -346,7 +354,7 @@ function renderProfesores(el) {
   el.innerHTML = `
     <div class="sa-toolbar">
       <input class="sa-input sa-input--search" id="search-profs" placeholder="Buscar profesor...">
-      <button class="sa-btn sa-btn--primary">+ Nuevo profesor</button>
+      <button class="sa-btn sa-btn--primary" id="btn-new-profesor">+ Nuevo profesor</button>
     </div>
     <div class="sa-table-wrap">
       <table class="sa-table">
@@ -357,6 +365,8 @@ function renderProfesores(el) {
   `;
 
   fillProfsRows(state.profs);
+
+  document.getElementById('btn-new-profesor')?.addEventListener('click', openCreateProfesorModal);
 
   document.getElementById('search-profs').addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
@@ -573,6 +583,264 @@ function bindDeleteModalEvents() {
     closeDeleteModal();
   });
 }
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB: OPCIONES  
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderOpciones(el) {
+  el.innerHTML = `
+    <div class="sa-dir-header">
+      <div>
+        <div class="sa-dir-title">Opciones del colegio</div>
+        <div class="sa-dir-subtitle">Gestioná el estado de este colegio.</div>
+      </div>
+    </div>
+    <div id="options-content"></div>
+  `;
+
+  renderOpcionesContent();
+}
+
+function renderOpcionesContent() {
+  const el = document.getElementById('options-content');
+  if (!el || !state.school) return;
+
+  const connected = state.school.on;
+
+  el.innerHTML = `
+    <div class="sa-options-grid">
+      <div class="sa-options-card">
+        <div>
+          <div class="sa-options-label">Conexión</div>
+          <div class="sa-options-text">Activá o desactivá la conexión del colegio dentro del sistema.</div>
+        </div>
+        <button class="sa-toggle ${connected ? 'sa-toggle--on' : ''}" id="btn-toggle-connection" aria-pressed="${connected}">
+          <span class="sa-toggle__thumb"></span>
+        </button>
+      </div>
+
+      <div class="sa-options-card sa-options-card--danger">
+        <div>
+          <div class="sa-options-label">Eliminar colegio</div>
+          <div class="sa-options-text">Esta acción eliminará el colegio seleccionado y lo quitará del panel.</div>
+        </div>
+        <button class="sa-btn sa-btn--ghost-danger sa-btn--sm" id="btn-delete-school">Eliminar colegio</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-toggle-connection')?.addEventListener('click', () => {
+    state.school.on = !state.school.on;
+    renderOpcionesContent();
+    renderSidebar();
+    showToast(`Conexión ${state.school.on ? 'activada' : 'desactivada'}`);
+  });
+
+  document.getElementById('btn-delete-school')?.addEventListener('click', () => {
+    openDeleteModal(
+      '¿Eliminar este colegio?',
+      state.school.n,
+      'Sí, eliminar',
+      () => {
+        const schoolId = state.school.id;
+        const schoolName = state.school.n;
+        const index = SCHOOLS.findIndex(s => s.id === schoolId);
+        if (index !== -1) SCHOOLS.splice(index, 1);
+        state.school = null;
+        state.tab = 'clases';
+        renderSidebar();
+        renderMain();
+        showToast(`Colegio ${schoolName} eliminado`);
+      }
+    );
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MODAL: CREAR ALUMNO
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openCreateAlumnoModal() {
+  // Limpiar campos
+  document.getElementById('campo-alum-nombre').value = '';
+  document.getElementById('campo-alum-apellido').value = '';
+  document.getElementById('campo-alum-dni').value = '';
+  document.getElementById('campo-alum-fecha').value = '';
+  
+  // Poblar dropdown de cursos
+  const selectCurso = document.getElementById('campo-alum-curso');
+  selectCurso.innerHTML = '<option value="">Seleccioná un curso</option>';
+  state.clases.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c.id;
+    option.textContent = c.n;
+    selectCurso.appendChild(option);
+  });
+  selectCurso.value = '';
+  
+  document.getElementById('btn-alum-confirm').disabled = true;
+  document.getElementById('modal-alumno').classList.remove('hidden');
+}
+
+function closeCreateAlumnoModal() {
+  document.getElementById('modal-alumno').classList.add('hidden');
+}
+
+function bindCreateAlumnoModalEvents() {
+  document.getElementById('modal-alumno').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateAlumnoModal();
+  });
+  document.getElementById('btn-alum-cancel').addEventListener('click', closeCreateAlumnoModal);
+
+  // Validación de campos
+  const campos = ['campo-alum-nombre', 'campo-alum-apellido', 'campo-alum-dni', 'campo-alum-fecha', 'campo-alum-curso'];
+  campos.forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const dni = document.getElementById('campo-alum-dni').value;
+      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
+      const dniValid = dni.length === 8 && /^\d+$/.test(dni);
+      document.getElementById('btn-alum-confirm').disabled = !(allFilled && dniValid);
+    });
+  });
+
+  document.getElementById('btn-alum-confirm').addEventListener('click', () => {
+    const nombre = document.getElementById('campo-alum-nombre').value.trim();
+    const apellido = document.getElementById('campo-alum-apellido').value.trim();
+    const dni = document.getElementById('campo-alum-dni').value.trim();
+    const fecha = document.getElementById('campo-alum-fecha').value;
+    const cursoId = parseInt(document.getElementById('campo-alum-curso').value);
+
+    const curso = state.clases.find(c => c.id === cursoId);
+    if (!curso) {
+      showToast('Error: selecciona un curso válido');
+      return;
+    }
+
+    const newAlumno = {
+      id: Date.now(),
+      n: `${apellido}, ${nombre}`,
+      cl: curso.n,
+      dni,
+      fecha_nacimiento: fecha,
+      curso_id: cursoId,
+      creado_en: new Date().toISOString(),
+    };
+
+    state.alums.push(newAlumno);
+    closeCreateAlumnoModal();
+    if (state.tab === 'alumnos') renderTabContent();
+    showToast(`✓ Alumno ${nombre} ${apellido} creado exitosamente`);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MODAL: CREAR PROFESOR
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openCreateProfesorModal() {
+  document.getElementById('campo-prof-nombre').value = '';
+  document.getElementById('campo-prof-apellido').value = '';
+  document.getElementById('campo-prof-email').value = '';
+  document.getElementById('campo-prof-materia').value = '';
+  document.getElementById('btn-prof-confirm').disabled = true;
+  document.getElementById('modal-profesor').classList.remove('hidden');
+}
+
+function closeCreateProfesorModal() {
+  document.getElementById('modal-profesor').classList.add('hidden');
+}
+
+function bindCreateProfesorModalEvents() {
+  document.getElementById('modal-profesor').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateProfesorModal();
+  });
+  document.getElementById('btn-prof-cancel').addEventListener('click', closeCreateProfesorModal);
+
+  const campos = ['campo-prof-nombre', 'campo-prof-apellido', 'campo-prof-email', 'campo-prof-materia'];
+  campos.forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
+      const emailValid = document.getElementById('campo-prof-email').value.includes('@');
+      document.getElementById('btn-prof-confirm').disabled = !(allFilled && emailValid);
+    });
+  });
+
+  document.getElementById('btn-prof-confirm').addEventListener('click', () => {
+    const nombre = document.getElementById('campo-prof-nombre').value.trim();
+    const apellido = document.getElementById('campo-prof-apellido').value.trim();
+    const email = document.getElementById('campo-prof-email').value.trim();
+    const materia = document.getElementById('campo-prof-materia').value.trim();
+
+    const newProfesor = {
+      id: Date.now(),
+      n: `${nombre} ${apellido}`,
+      m: materia,
+      cl: '',
+      email,
+      creado_en: new Date().toISOString(),
+    };
+
+    state.profs.push(newProfesor);
+    closeCreateProfesorModal();
+    if (state.tab === 'profesores') renderTabContent();
+    showToast(`✓ Profesor ${nombre} ${apellido} creado exitosamente`);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MODAL: CREAR CLASE
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openCreateClaseModal() {
+  document.getElementById('campo-clase-nombre').value = '';
+  document.getElementById('campo-clase-nivel').value = '';
+  document.getElementById('campo-clase-turno').value = '';
+  document.getElementById('campo-clase-preceptor').value = '';
+  document.getElementById('btn-clase-confirm').disabled = true;
+  document.getElementById('modal-clase').classList.remove('hidden');
+}
+
+function closeCreateClaseModal() {
+  document.getElementById('modal-clase').classList.add('hidden');
+}
+
+function bindCreateClaseModalEvents() {
+  document.getElementById('modal-clase').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateClaseModal();
+  });
+  document.getElementById('btn-clase-cancel').addEventListener('click', closeCreateClaseModal);
+
+  const campos = ['campo-clase-nombre', 'campo-clase-nivel', 'campo-clase-turno', 'campo-clase-preceptor'];
+  campos.forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
+      document.getElementById('btn-clase-confirm').disabled = !allFilled;
+    });
+  });
+
+  document.getElementById('btn-clase-confirm').addEventListener('click', () => {
+    const nombre = document.getElementById('campo-clase-nombre').value.trim();
+    const nivel = document.getElementById('campo-clase-nivel').value.trim();
+    const turno = document.getElementById('campo-clase-turno').value.trim();
+    const preceptor = document.getElementById('campo-clase-preceptor').value.trim();
+
+    const newClase = {
+      id: Date.now(),
+      n: nombre,
+      nv: nivel,
+      t: turno,
+      a: '',
+      prec: preceptor,
+      al: 0,
+      creado_en: new Date().toISOString(),
+    };
+
+    state.clases.push(newClase);
+    closeCreateClaseModal();
+    if (state.tab === 'clases') renderTabContent();
+    showToast(`✓ Clase ${nombre} creada exitosamente`);
+  });
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TOAST
@@ -584,6 +852,9 @@ function showToast(msg) {
   const el = document.getElementById('sa-toast');
   el.textContent = msg;
   el.classList.remove('hidden');
+  el.classList.add('sa-toast--visible');
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('sa-toast--visible');
+  }, 3000);
 }

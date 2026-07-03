@@ -41,7 +41,7 @@
     passInput.classList.remove('input-error');
   }
 
-function redirigirPorRol(rol) {
+  function redirigirPorRol(rol) {
     if (rol === 'admin' )
       window.location.replace('admin.html');
     else if (rol === 'superadmin')
