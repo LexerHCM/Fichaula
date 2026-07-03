@@ -103,6 +103,115 @@
     </div>
   </div>
 
+  <!-- ── Modal: Crear Alumno ────────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-alumno">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nuevo alumno</div>
+      <p class="sa-modal__subtitle">Registrá un nuevo estudiante en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-alum-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-alum-nombre" placeholder="Juan" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-alum-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-alum-apellido" placeholder="García" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-dni">DNI (8 dígitos, sin puntos)</label>
+          <input type="text" class="sa-input" id="campo-alum-dni" placeholder="44123456" autocomplete="off" maxlength="8">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-fecha">Fecha de nacimiento</label>
+          <input type="date" class="sa-input" id="campo-alum-fecha">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-curso">Asignar a curso</label>
+          <select class="sa-input" id="campo-alum-curso">
+            <option value="">Seleccioná un curso</option>
+          </select>
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-alum-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-alum-confirm" disabled>Crear alumno</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Profesor ──────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-profesor">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nuevo profesor</div>
+      <p class="sa-modal__subtitle">Registrá un nuevo docente en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-prof-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-prof-nombre" placeholder="María" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-prof-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-prof-apellido" placeholder="González" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-prof-email">Email institucional</label>
+          <input type="email" class="sa-input" id="campo-prof-email" placeholder="profesor@colegio.edu.ar" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-prof-materia">Materia</label>
+          <input type="text" class="sa-input" id="campo-prof-materia" placeholder="Matemática" autocomplete="off">
+        </div>
+        <div class="sa-modal__info">
+          ℹ Se creará una cuenta de profesor en el sistema. El email será usado para iniciar sesión.
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-prof-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-prof-confirm" disabled>Crear profesor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Clase ─────────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-clase">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nueva clase</div>
+      <p class="sa-modal__subtitle">Registrá una nueva clase en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-field">
+          <label class="sa-label" for="campo-clase-nombre">Nombre</label>
+          <input type="text" class="sa-input" id="campo-clase-nombre" placeholder="1° A" autocomplete="off">
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-clase-nivel">Nivel</label>
+            <input type="text" class="sa-input" id="campo-clase-nivel" placeholder="Primer Año" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-clase-turno">Turno</label>
+            <select class="sa-input" id="campo-clase-turno">
+              <option value="">Seleccionar</option>
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+            </select>
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-clase-preceptor">Preceptor/a</label>
+          <input type="text" class="sa-input" id="campo-clase-preceptor" placeholder="Nombre del preceptor" autocomplete="off">
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-clase-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-clase-confirm" disabled>Crear clase</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Toast ──────────────────────────────────────────────────────────── -->
   <div class="sa-toast hidden" id="sa-toast"></div>
 
