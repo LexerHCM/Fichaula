@@ -13,13 +13,13 @@
   'use strict';
 
   // Si ya hay sesión activa, redirigir directamente.
-  const actual = getUsuarioActual();
-  if (actual) {
-    if (actual.rol === 'admin') window.location.replace('admin.html');
-    else if(actual.rol ==='profesor')                         window.location.replace('../index.html');
-    else window.location.replace('superadmin.html');
-    return;
-  }
+const actual = getUsuarioActual();
+if (actual) {
+  if (actual.rol === 'admin') window.location.replace('admin.html');
+  else if (actual.rol === 'superadmin') window.location.replace('superadmin.html');
+  else if (actual.rol === 'profesor') window.location.replace('../index.html');
+  return;
+}
 
   // ── Referencias a elementos ──
   const card        = document.getElementById('login-card');
