@@ -41,9 +41,11 @@
     passInput.classList.remove('input-error');
   }
 
-  function redirigirPorRol(rol) {
-    if (rol === 'admin' || rol === 'superadmin')
+function redirigirPorRol(rol) {
+    if (rol === 'admin' )
       window.location.replace('admin.html');
+    else if (rol === 'superadmin')
+      window.location.replace('superadmin.html');
     else
       window.location.replace('../index.html');
   }
