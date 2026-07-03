@@ -80,8 +80,3 @@ fichaula/
 - Datos en memoria (no hay backend ni base de datos)
 
 ---
-
-## Notas
-
-- Los datos son mock y se reinician al recargar la página.
-- No hay backend — toda la lógica corre en el cliente.
