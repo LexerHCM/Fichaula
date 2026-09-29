@@ -18,6 +18,10 @@ function renderNav(activeLink = '', enPages = true) {
 
   const base = enPages ? '../' : '';
   const user = getUsuarioActual();
+  const isSuperadminPage = window.location.pathname.toLowerCase().endsWith('/superadmin.html');
+  const isSuperadminMenu = !!user && user.rol === 'superadmin' && !isSuperadminPage;
+  const homeLabel = isSuperadminMenu ? 'Menú Superadmin' : 'Inicio';
+  const homeHref = isSuperadminMenu ? `${base}pages/superadmin.html` : `${base}index.html`;
 
   // Escapa texto antes de interpolarlo en innerHTML (anti-XSS).
   const esc = (s) => String(s == null ? '' : s)
@@ -70,7 +74,7 @@ function renderNav(activeLink = '', enPages = true) {
         <div class="dropdown">
           ${userChip}
           <div class="dropdown-content">
-            <a href="${base}index.html">Inicio</a>
+            <a href="${homeHref}">${homeLabel}</a>
             <a href="#" onclick="cerrarSesion(); return false;">Cerrar Sesión</a>
           </div>
         </div>

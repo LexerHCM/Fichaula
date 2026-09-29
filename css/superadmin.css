@@ -61,10 +61,18 @@ html, body {
 .sa-breadcrumb__school { font-size: 13px; font-weight: 600; color: #fff; }
 
 .sa-nav__user {
-  display: flex; align-items: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--card); border: 1px solid var(--border);
   border-radius: 10px; padding: 5px 10px;
+  cursor: pointer;
 }
+
+.sa-nav__user:hover {
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
 .sa-user-avatar {
   width: 26px; height: 26px; border-radius: 50%;
   background: var(--v); display: flex; align-items: center;
@@ -72,6 +80,44 @@ html, body {
 }
 .sa-user-name { font-size: 12px; font-weight: 600; }
 .sa-user-role { font-size: 10px; color: var(--muted); }
+
+/* Dropdown menu styles */
+.sa-nav__dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.sa-nav__dropdown .dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: #111827;
+  min-width: 170px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  overflow: hidden;
+  z-index: 200;
+}
+
+.sa-nav__dropdown .dropdown-content a {
+  display: block;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  background: transparent;
+}
+
+.sa-nav__dropdown .dropdown-content a:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+.sa-nav__dropdown.show .dropdown-content {
+  display: block;
+}
 
 /* ── Layout ───────────────────────────────────────────────────────────────── */
 .sa-layout {

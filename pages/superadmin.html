@@ -24,11 +24,17 @@
         <span class="sa-breadcrumb__school" id="breadcrumb-school"></span>
       </div>
     </div>
-    <div class="sa-nav__user">
-      <div class="sa-user-avatar">SA</div>
-      <div>
-        <div class="sa-user-name">Sistema FichAula</div>
-        <div class="sa-user-role">Superadministrador</div>
+    <div class="dropdown sa-nav__dropdown">
+      <div class="sa-nav__user" id="sa-user-menu-trigger">
+        <div class="sa-user-avatar">SA</div>
+        <div>
+          <div class="sa-user-name">Sistema FichAula</div>
+          <div class="sa-user-role">Superadministrador</div>
+        </div>
+      </div>
+      <div class="dropdown-content">
+        <a href="../index.html">Preview</a>
+        <a href="#" onclick="cerrarSesion(); return false;">Cerrar Sesión</a>
       </div>
     </div>
   </header>
@@ -215,6 +221,8 @@
   <!-- ── Toast ──────────────────────────────────────────────────────────── -->
   <div class="sa-toast hidden" id="sa-toast"></div>
 
+  <script src="../js/supabase.js"></script>
+  <script src="../js/auth.js"></script>
   <script src="../js/superadmin.js"></script>
 </body>
 </html>

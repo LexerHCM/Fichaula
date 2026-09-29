@@ -52,7 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCreateProfesorModalEvents();
   bindCreateClaseModalEvents();
   bindDeleteModalEvents();
+  setupSuperadminDropdown();
 });
+
+function setupSuperadminDropdown() {
+  const dropdown = document.querySelector('.sa-nav__dropdown');
+  if (!dropdown || dropdown.dataset.dropdownSetup === 'true') return;
+  dropdown.dataset.dropdownSetup = 'true';
+
+  const trigger = document.getElementById('sa-user-menu-trigger');
+  const content = dropdown.querySelector('.dropdown-content');
+  if (!trigger || !content) return;
+
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation();
+    dropdown.classList.toggle('show');
+  });
+
+  content.addEventListener('click', (event) => event.stopPropagation());
+  document.addEventListener('click', () => dropdown.classList.remove('show'));
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // NAV

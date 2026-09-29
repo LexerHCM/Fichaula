@@ -235,7 +235,7 @@
       const ini = (s.alumno_nombre[0] + s.alumno_apellido[0]).toUpperCase();
       const catLabel = { conducta: 'Conducta', actitud: 'Actitud', nota: 'Nota', observacion: 'Observación' }[s.categoria] || s.categoria;
       const valorPrefix = s.categoria === 'nota' ? `<span class="seg-nota-valor">${s.valor}</span>` : '';
-      const puedeBorrar = puedeAgregar && s.profesor_id === user.id;
+      const puedeBorrar = (user.rol === 'superadmin' || puedeAgregar) && (user.rol === 'superadmin' || s.profesor_id === user.id);
       const btnBorrar = puedeBorrar
         ? `<button class="btn-seg-eliminar" data-id="${s.id}" title="Eliminar">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
