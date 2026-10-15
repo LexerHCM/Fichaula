@@ -725,7 +725,8 @@ footer {
     font-family: 'DM Sans', sans-serif;
     font-size: 13px;
     outline: none;
-    width: 240px;
+    width: 360px;
+    max-width: 100%;
     transition: border-color 0.2s;
 }
 
@@ -953,7 +954,7 @@ footer {
 }
 .seg-form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 100px 2fr auto;
+    grid-template-columns: 1fr 1fr 100px 2fr;
     gap: 12px;
     align-items: stretch;
 }
@@ -1136,4 +1137,199 @@ footer {
     .btn-seg { padding: 12px; justify-content: center; }
     .user-chip-text { display: none; }
     .user-chip { padding: 6px; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   v5 — Seguimientos: visibilidad, filtros, avisos y borrado
+   (lo usan curso.html y el panel de administración)
+   ════════════════════════════════════════════════════════════ */
+
+/* Ocultar por clase, en lugar de estilos en línea */
+.oculto { display: none !important; }
+
+/* ── Pie del formulario: quién puede ver el seguimiento + botón Agregar ── */
+.seg-form-pie {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.seg-form-pie .btn-seg {
+    padding: 11px 22px;
+    justify-content: center;
+}
+.seg-visibilidad {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.seg-visibilidad-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--white-40);
+}
+.seg-visibilidad-opciones {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+}
+.seg-vis-opcion { position: relative; cursor: pointer; }
+.seg-vis-opcion input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.seg-vis-opcion span {
+    display: block;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--white-70);
+    transition: background 0.2s, color 0.2s;
+}
+.seg-vis-opcion:hover span { color: var(--white); }
+.seg-vis-opcion input:checked + span {
+    background: var(--violet);
+    color: var(--white);
+}
+.seg-vis-opcion input:focus-visible + span {
+    outline: 2px solid var(--violet-light);
+    outline-offset: 2px;
+}
+.seg-visibilidad-ayuda {
+    font-size: 12px;
+    color: var(--white-40);
+}
+
+/* Campo obligatorio sin completar */
+.seg-campo-error { border-color: #E24B4A !important; }
+
+/* ── Avisos en la página (errores y confirmaciones) ── */
+.seg-aviso {
+    display: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+.seg-aviso.visible { display: block; animation: fadeUp 0.3s ease; }
+.seg-aviso.error {
+    background: rgba(226,75,74,0.12);
+    border: 1px solid rgba(226,75,74,0.3);
+    color: #f08080;
+}
+.seg-aviso.ok {
+    background: rgba(29,158,117,0.12);
+    border: 1px solid rgba(29,158,117,0.3);
+    color: #6ED6B0;
+}
+
+/* ── Barra de filtros ── */
+.seg-filtros {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+.seg-filtro {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.seg-filtro--ancho { grid-column: span 2; }
+.seg-filtro-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--white-40);
+}
+.seg-filtro-rango {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.seg-filtro input[type="date"] { color-scheme: dark; }
+.btn-seg-limpiar {
+    background: transparent;
+    color: var(--white-70);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+.btn-seg-limpiar:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: var(--white);
+}
+.seg-filtros-resumen {
+    font-size: 13px;
+    color: var(--white-40);
+    margin-bottom: 16px;
+    min-height: 18px;
+}
+.seg-filtros-resumen strong {
+    color: var(--white-70);
+    font-weight: 500;
+}
+
+/* ── Lista: avatar chico y etiqueta de visibilidad ── */
+.seg-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+}
+.seg-vis-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.seg-vis-admin    { background: rgba(239,159,39,0.12); color: #EF9F27; }
+.seg-vis-profesor { background: rgba(29,158,117,0.15); color: #6ED6B0; }
+
+/* ── Eliminar con confirmación en el mismo botón ── */
+.btn-seg-eliminar-texto { display: none; }
+.btn-seg-eliminar.confirmar {
+    color: #f08080;
+    background: rgba(226,75,74,0.12);
+    border: 1px solid rgba(226,75,74,0.3);
+    padding: 5px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+}
+.btn-seg-eliminar.confirmar svg { display: none; }
+.btn-seg-eliminar.confirmar .btn-seg-eliminar-texto { display: inline; }
+.btn-seg-eliminar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+    .seg-form-pie { flex-direction: column; align-items: stretch; }
+    .seg-filtros { grid-template-columns: 1fr 1fr; }
+    .seg-filtro--ancho { grid-column: 1 / -1; }
+    .search-input-wrapper { width: 100%; }
 }

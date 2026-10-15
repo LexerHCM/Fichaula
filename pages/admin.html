@@ -28,6 +28,9 @@
         <button class="admin-tab" data-tab="alumnos">Alumnos</button>
         <button class="admin-tab" data-tab="profesores">Profesores</button>
         <button class="admin-tab" data-tab="seguimientos">Seguimientos</button>
+        <button class="admin-tab" data-tab="papelera">
+          Papelera <span class="tab-contador oculto" id="contador-papelera">0</span>
+        </button>
       </div>
 
       <!-- ═══ TAB: CLASES ═══ -->
@@ -66,7 +69,7 @@
       <div class="admin-tab-panel" id="panel-alumnos">
         <div class="admin-toolbar">
           <div class="admin-toolbar-left">
-            <input type="text" class="admin-search" id="search-alumnos"
+            <input type="text" class="admin-search" id="search-alumnos" maxlength="80"
                    placeholder="Buscar por nombre, legajo, DNI o curso...">
           </div>
           <button class="btn-admin-action" id="btn-nuevo-alumno">
@@ -119,12 +122,92 @@
 
       <!-- ═══ TAB: SEGUIMIENTOS ═══ -->
       <div class="admin-tab-panel" id="panel-seguimientos">
+        <div class="seg-filtros" id="filtros-seguimientos">
+          <label class="seg-filtro seg-filtro--ancho">
+            <span class="seg-filtro-label">Buscar</span>
+            <input type="text" class="seg-input" data-filtro="texto" maxlength="80"
+                   placeholder="Texto, alumno, profesor o clase...">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Alumno</span>
+            <select class="seg-select" data-filtro="alumnoId">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Profesor</span>
+            <select class="seg-select" data-filtro="profesorId">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Categoría</span>
+            <select class="seg-select" data-filtro="categoria">
+              <option value="">Todas</option>
+              <option value="conducta">Conducta</option>
+              <option value="actitud">Actitud</option>
+              <option value="nota">Nota</option>
+              <option value="observacion">Observación</option>
+            </select>
+          </label>
+          <div class="seg-filtro">
+            <span class="seg-filtro-label">Nota (de – a)</span>
+            <div class="seg-filtro-rango">
+              <input type="number" class="seg-numero" data-filtro="notaMin"
+                     placeholder="0" min="0" max="10" step="0.1" aria-label="Nota mínima">
+              <input type="number" class="seg-numero" data-filtro="notaMax"
+                     placeholder="10" min="0" max="10" step="0.1" aria-label="Nota máxima">
+            </div>
+          </div>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Desde</span>
+            <input type="date" class="seg-input" data-filtro="desde">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Hasta</span>
+            <input type="date" class="seg-input" data-filtro="hasta">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Estado</span>
+            <select class="seg-select" data-filtro="estado" data-filtro-defecto="activos">
+              <option value="activos">Activos</option>
+              <option value="eliminados">Eliminados</option>
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <div class="seg-filtro">
+            <button type="button" class="btn-seg-limpiar" data-filtro-limpiar>Limpiar filtros</button>
+          </div>
+        </div>
+        <div class="seg-filtros-resumen" id="resumen-seguimientos"></div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Alumno</th>
+                <th>Clase</th>
+                <th>Texto</th>
+                <th>Profesor</th>
+                <th>Visible para</th>
+                <th>Fecha</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-seguimientos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: PAPELERA (seguimientos eliminados) ═══ -->
+      <div class="admin-tab-panel" id="panel-papelera">
         <div class="admin-toolbar">
           <div class="admin-toolbar-left">
-            <input type="text" class="admin-search" id="search-seguimientos"
-                   placeholder="Buscar por alumno, profesor o categoría...">
+            <input type="text" class="admin-search" id="search-papelera" maxlength="80"
+                   aria-label="Buscar en la papelera"
+                   placeholder="Buscar por texto, alumno o profesor...">
           </div>
-          <span class="seguimientos-hint">Vista de solo lectura</span>
+          <span class="seguimientos-hint">Se borran solos a los 30 días</span>
         </div>
         <div class="admin-table-wrapper">
           <table class="admin-table">
@@ -135,10 +218,11 @@
                 <th>Clase</th>
                 <th>Texto</th>
                 <th>Profesor</th>
-                <th>Hora</th>
+                <th>Eliminado</th>
+                <th class="acciones-col">Acciones</th>
               </tr>
             </thead>
-            <tbody id="tbody-seguimientos"></tbody>
+            <tbody id="tbody-papelera"></tbody>
           </table>
         </div>
       </div>
@@ -162,10 +246,10 @@
     </div>
   </div>
 
-  <script src="../js/data.js"></script>
+  <script src="../js/supabase.js"></script>
   <script src="../js/auth.js"></script>
-  <script src="../js/admin-logic.js"></script>
   <script src="../js/components.js"></script>
+  <script src="../js/filtros.js"></script>
   <script src="../js/admin.js"></script>
 
 </body>
