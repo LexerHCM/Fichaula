@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Panel de Administración — Fichaula</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header></header>
+
+  <main>
+    <div class="admin-shell">
+
+      <!-- Header del panel -->
+      <div class="admin-header">
+        <div class="badge">PANEL DE ADMINISTRACIÓN</div>
+        <h1>Control <span>total</span></h1>
+        <p>Gestioná clases, alumnos, profesores y revisá los seguimientos cargados por los docentes.</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="clases">Clases</button>
+        <button class="admin-tab" data-tab="alumnos">Alumnos</button>
+        <button class="admin-tab" data-tab="profesores">Profesores</button>
+        <button class="admin-tab" data-tab="seguimientos">Seguimientos</button>
+        <button class="admin-tab" data-tab="papelera">
+          Papelera <span class="tab-contador oculto" id="contador-papelera">0</span>
+        </button>
+      </div>
+
+      <!-- ═══ TAB: CLASES ═══ -->
+      <div class="admin-tab-panel active" id="panel-clases">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <input type="text" class="admin-search" id="search-clases"
+                   placeholder="Buscar clase por nombre, nivel o aula...">
+          </div>
+          <button class="btn-admin-action" id="btn-nueva-clase">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nueva clase
+          </button>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Nivel</th>
+                <th>Turno</th>
+                <th>Aula</th>
+                <th>Profesor titular</th>
+                <th>Alumnos</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-clases"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: ALUMNOS ═══ -->
+      <div class="admin-tab-panel" id="panel-alumnos">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <input type="text" class="admin-search" id="search-alumnos" maxlength="80"
+                   placeholder="Buscar por nombre, legajo, DNI o curso...">
+          </div>
+          <button class="btn-admin-action" id="btn-nuevo-alumno">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nuevo alumno
+          </button>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Legajo</th>
+                <th>Nombre y Apellido</th>
+                <th>DNI</th>
+                <th>Edad</th>
+                <th>Clase</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-alumnos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: PROFESORES ═══ -->
+      <div class="admin-tab-panel" id="panel-profesores">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <input type="text" class="admin-search" id="search-profesores"
+                   placeholder="Buscar profesor por nombre, materia o email...">
+          </div>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Profesor</th>
+                <th>Materia</th>
+                <th>Email</th>
+                <th>Clases asignadas</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-profesores"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: SEGUIMIENTOS ═══ -->
+      <div class="admin-tab-panel" id="panel-seguimientos">
+        <div class="seg-filtros" id="filtros-seguimientos">
+          <label class="seg-filtro seg-filtro--ancho">
+            <span class="seg-filtro-label">Buscar</span>
+            <input type="text" class="seg-input" data-filtro="texto" maxlength="80"
+                   placeholder="Texto, alumno, profesor o clase...">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Alumno</span>
+            <select class="seg-select" data-filtro="alumnoId">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Profesor</span>
+            <select class="seg-select" data-filtro="profesorId">
+              <option value="">Todos</option>
+            </select>
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Categoría</span>
+            <select class="seg-select" data-filtro="categoria">
+              <option value="">Todas</option>
+              <option value="conducta">Conducta</option>
+              <option value="actitud">Actitud</option>
+              <option value="nota">Nota</option>
+              <option value="observacion">Observación</option>
+            </select>
+          </label>
+          <div class="seg-filtro">
+            <span class="seg-filtro-label">Nota (de – a)</span>
+            <div class="seg-filtro-rango">
+              <input type="number" class="seg-numero" data-filtro="notaMin"
+                     placeholder="0" min="0" max="10" step="0.1" aria-label="Nota mínima">
+              <input type="number" class="seg-numero" data-filtro="notaMax"
+                     placeholder="10" min="0" max="10" step="0.1" aria-label="Nota máxima">
+            </div>
+          </div>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Desde</span>
+            <input type="date" class="seg-input" data-filtro="desde">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Hasta</span>
+            <input type="date" class="seg-input" data-filtro="hasta">
+          </label>
+          <label class="seg-filtro">
+            <span class="seg-filtro-label">Estado</span>
+            <select class="seg-select" data-filtro="estado" data-filtro-defecto="activos">
+              <option value="activos">Activos</option>
+              <option value="eliminados">Eliminados</option>
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <div class="seg-filtro">
+            <button type="button" class="btn-seg-limpiar" data-filtro-limpiar>Limpiar filtros</button>
+          </div>
+        </div>
+        <div class="seg-filtros-resumen" id="resumen-seguimientos"></div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Alumno</th>
+                <th>Clase</th>
+                <th>Texto</th>
+                <th>Profesor</th>
+                <th>Visible para</th>
+                <th>Fecha</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-seguimientos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: PAPELERA (seguimientos eliminados) ═══ -->
+      <div class="admin-tab-panel" id="panel-papelera">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <input type="text" class="admin-search" id="search-papelera" maxlength="80"
+                   aria-label="Buscar en la papelera"
+                   placeholder="Buscar por texto, alumno o profesor...">
+          </div>
+          <span class="seguimientos-hint">Se borran solos a los 30 días</span>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Alumno</th>
+                <th>Clase</th>
+                <th>Texto</th>
+                <th>Profesor</th>
+                <th>Eliminado</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-papelera"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <!-- ═══ MODAL UNIVERSAL ═══ -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal-box">
+      <h2 class="modal-title" id="modal-title">Título</h2>
+      <p class="modal-sub" id="modal-sub"></p>
+      <div class="modal-error" id="modal-error"></div>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn-admin-secondary" id="btn-modal-cancel">Cancelar</button>
+        <button class="btn-admin-action" id="btn-modal-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/filtros.js"></script>
+  <script src="../js/admin.js"></script>
+
+</body>
+</html>
