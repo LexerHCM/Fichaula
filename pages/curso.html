@@ -27,7 +27,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <input type="text" id="search-input" class="search-input" placeholder="Buscar alumno...">
+          <input type="text" id="search-input" class="search-input" placeholder="Buscar alumno..." maxlength="80">
         </div>
       </div>
 
@@ -43,7 +43,7 @@
     <section class="seguimientos-section" id="seguimientos-section" style="display:none;">
       <div class="seguimientos-header">
         <h2 class="seguimientos-title">Seguimiento de <span>alumnos</span></h2>
-        <span class="seguimientos-hint" id="seguimientos-hint">Temporales — se pierden al recargar</span>
+        <span class="seguimientos-hint" id="seguimientos-hint">Quedan guardados en la base de datos</span>
       </div>
 
       <!-- Form (solo profe) -->
@@ -63,7 +63,26 @@
                  placeholder="Nota" min="0" max="10" step="0.1" disabled>
           <input type="text" id="seg-texto" class="seg-input"
                  placeholder="Escribí el seguimiento..." maxlength="280">
-          <button class="btn-seg" id="btn-agregar-seg">
+        </div>
+
+        <!-- Quién puede ver el seguimiento que se está cargando, antes de agregarlo -->
+        <div class="seg-form-pie">
+          <div class="seg-visibilidad">
+            <span class="seg-visibilidad-label" id="seg-visibilidad-label">Visible para</span>
+            <div class="seg-visibilidad-opciones" role="radiogroup"
+                 aria-labelledby="seg-visibilidad-label" aria-describedby="seg-visibilidad-ayuda">
+              <label class="seg-vis-opcion">
+                <input type="radio" name="seg-visibilidad" value="admin" checked>
+                <span>Dirección</span>
+              </label>
+              <label class="seg-vis-opcion">
+                <input type="radio" name="seg-visibilidad" value="profesor">
+                <span>Todos</span>
+              </label>
+            </div>
+            <span class="seg-visibilidad-ayuda" id="seg-visibilidad-ayuda"></span>
+          </div>
+          <button type="button" class="btn-seg" id="btn-agregar-seg">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -72,6 +91,61 @@
           </button>
         </div>
       </div>
+
+      <!-- Avisos (errores y confirmaciones) -->
+      <div class="seg-aviso" id="seg-aviso" role="status"></div>
+
+      <!-- Filtros de la lista -->
+      <div class="seg-filtros" id="seg-filtros">
+        <label class="seg-filtro seg-filtro--ancho">
+          <span class="seg-filtro-label">Buscar</span>
+          <input type="text" class="seg-input" data-filtro="texto" maxlength="80"
+                 placeholder="Texto, alumno o profesor...">
+        </label>
+        <label class="seg-filtro">
+          <span class="seg-filtro-label">Alumno</span>
+          <select class="seg-select" data-filtro="alumnoId">
+            <option value="">Todos</option>
+          </select>
+        </label>
+        <label class="seg-filtro">
+          <span class="seg-filtro-label">Categoría</span>
+          <select class="seg-select" data-filtro="categoria">
+            <option value="">Todas</option>
+            <option value="conducta">Conducta</option>
+            <option value="actitud">Actitud</option>
+            <option value="nota">Nota</option>
+            <option value="observacion">Observación</option>
+          </select>
+        </label>
+        <div class="seg-filtro">
+          <span class="seg-filtro-label">Nota (de – a)</span>
+          <div class="seg-filtro-rango">
+            <input type="number" class="seg-numero" data-filtro="notaMin"
+                   placeholder="0" min="0" max="10" step="0.1" aria-label="Nota mínima">
+            <input type="number" class="seg-numero" data-filtro="notaMax"
+                   placeholder="10" min="0" max="10" step="0.1" aria-label="Nota máxima">
+          </div>
+        </div>
+        <label class="seg-filtro">
+          <span class="seg-filtro-label">Profesor</span>
+          <select class="seg-select" data-filtro="profesorId">
+            <option value="">Todos</option>
+          </select>
+        </label>
+        <label class="seg-filtro">
+          <span class="seg-filtro-label">Desde</span>
+          <input type="date" class="seg-input" data-filtro="desde">
+        </label>
+        <label class="seg-filtro">
+          <span class="seg-filtro-label">Hasta</span>
+          <input type="date" class="seg-input" data-filtro="hasta">
+        </label>
+        <div class="seg-filtro">
+          <button type="button" class="btn-seg-limpiar" data-filtro-limpiar>Limpiar filtros</button>
+        </div>
+      </div>
+      <div class="seg-filtros-resumen" id="seg-filtros-resumen"></div>
 
       <div class="seguimientos-list" id="seguimientos-list"></div>
 
@@ -85,10 +159,10 @@
 
   <footer></footer>
 
-  <script src="../js/data.js"></script>
+  <script src="../js/supabase.js"></script>
   <script src="../js/auth.js"></script>
-  <script src="../js/admin-logic.js"></script>
   <script src="../js/components.js"></script>
+  <script src="../js/filtros.js"></script>
   <script src="../js/curso.js"></script>
 
 </body>

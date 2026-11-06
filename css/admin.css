@@ -145,7 +145,7 @@
     background: var(--white-5);
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: 14px;
-    overflow: hidden;
+    overflow-x: auto;
 }
 .admin-table {
     width: 100%;
@@ -350,6 +350,74 @@
 }
 .curso-check-item input[type="checkbox"]:checked + span {
     color: var(--violet-light);
+}
+
+/* ════════════════════════════════════════════════════════════
+   SEGUIMIENTOS Y PAPELERA
+   (filtros, etiquetas y avisos compartidos: ver style.css)
+   ════════════════════════════════════════════════════════════ */
+
+/* Botón secundario al tamaño de los botones de fila */
+.btn-admin-sm {
+    padding: 7px 14px;
+    font-size: 12px;
+}
+
+/* Cantidad de elementos en la pestaña Papelera */
+.tab-contador {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: var(--violet-dim);
+    color: var(--violet-light);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.celda-principal  { color: var(--white); }
+.celda-secundaria { color: var(--white-40); font-size: 11px; }
+.admin-table tbody td.celda-autor { color: var(--violet-light); white-space: nowrap; }
+.admin-table tbody td.celda-fecha {
+    color: var(--white-40);
+    white-space: nowrap;
+}
+
+.seg-estado-eliminado {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(226,75,74,0.12);
+    color: #f08080;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Ficha de un seguimiento (modal "Ver") */
+.detalle-titulo {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 20px 0 10px;
+}
+.detalle-titulo:first-child { margin-top: 0; }
+.detalle {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 8px 16px;
+    font-size: 13px;
+}
+.detalle dt { color: var(--white-40); }
+.detalle dd {
+    margin: 0;
+    color: var(--white-70);
+    word-break: break-word;
 }
 
 /* Responsive */
