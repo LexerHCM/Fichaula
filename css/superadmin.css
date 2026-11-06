@@ -460,3 +460,7 @@ select.sa-input {
   visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
+/* ── Ficha de alumno ──────────────────────────────────────────────────────── */
+.sa-ficha { display: grid; grid-template-columns: 130px 1fr; gap: 10px 16px; font-size: 13px; }
+.sa-ficha dt { color: var(--muted); }
+.sa-ficha dd { margin: 0; color: #fff; font-weight: 600; word-break: break-word; }

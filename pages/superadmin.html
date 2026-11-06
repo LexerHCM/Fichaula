@@ -16,7 +16,7 @@
           <a class="navurl" href="superadmin.html">
           <span class="sa-logo--white">Fich</span><span class="sa-logo--violet">aula</span>
         </a></span>
-      
+
       <div class="sa-breadcrumb hidden" id="sa-breadcrumb">
         <span class="sa-breadcrumb__sep">│</span>
         <button class="sa-breadcrumb__back" id="btn-back">← Colegios</button>
@@ -46,7 +46,7 @@
     <aside class="sa-sidebar">
       <div class="sa-sidebar__header">
         <div class="sa-sidebar__label">Colegios (<span id="school-count">0</span>)</div>
-        <button class="sa-btn sa-btn--primary sa-btn--full">+ Nuevo colegio</button>
+        <button class="sa-btn sa-btn--primary sa-btn--full" id="btn-new-school">+ Nuevo colegio</button>
       </div>
       <div class="sa-sidebar__list" id="school-list"></div>
       <div class="sa-sidebar__stats" id="sidebar-stats"></div>
@@ -57,10 +57,10 @@
 
   </div>
 
-  <!-- ── Modal: Crear Directivo ─────────────────────────────────────────── -->
+  <!-- ── Modal: Crear / Editar Directivo ────────────────────────────────── -->
   <div class="sa-overlay hidden" id="modal-create">
     <div class="sa-modal">
-      <div class="sa-modal__title">Crear cuenta de directivo</div>
+      <div class="sa-modal__title" id="create-title">Crear cuenta de directivo</div>
       <p class="sa-modal__subtitle" id="modal-create-subtitle"></p>
       <div class="sa-modal__body">
         <div class="sa-form-row">
@@ -79,9 +79,9 @@
         </div>
         <div class="sa-field">
           <label class="sa-label" for="field-password">Contraseña temporal</label>
-          <input type="password" class="sa-input" id="field-password" placeholder="Mínimo 8 caracteres">
+          <input type="password" class="sa-input" id="field-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
         </div>
-        <div class="sa-modal__info">
+        <div class="sa-modal__info" id="create-info">
           ℹ Se creará la cuenta en <strong>Supabase Auth</strong> y se insertará el rol
           <strong>directivo</strong> con el <strong>colegio_id</strong> correspondiente.
         </div>
@@ -105,6 +105,28 @@
       <div class="sa-modal__footer sa-modal__footer--center">
         <button class="sa-btn sa-btn--secondary" id="btn-delete-cancel">Cancelar</button>
         <button class="sa-btn sa-btn--danger" id="btn-delete-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Colegio ───────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-colegio">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nuevo colegio</div>
+      <p class="sa-modal__subtitle">Registrá un nuevo colegio en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-field">
+          <label class="sa-label" for="campo-col-nombre">Nombre</label>
+          <input type="text" class="sa-input" id="campo-col-nombre" placeholder="Colegio San Martín" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-col-ab">Sigla (opcional, hasta 4 letras)</label>
+          <input type="text" class="sa-input" id="campo-col-ab" placeholder="CSM" maxlength="4" autocomplete="off">
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-col-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-col-confirm" disabled>Crear colegio</button>
       </div>
     </div>
   </div>
@@ -147,11 +169,25 @@
     </div>
   </div>
 
-  <!-- ── Modal: Crear Profesor ──────────────────────────────────────────── -->
+  <!-- ── Modal: Ficha de alumno ─────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-ficha">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Ficha del alumno</div>
+      <p class="sa-modal__subtitle" id="ficha-subtitle"></p>
+      <div class="sa-modal__body">
+        <dl class="sa-ficha" id="ficha-body"></dl>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-ficha-close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear / Editar Profesor ─────────────────────────────────── -->
   <div class="sa-overlay hidden" id="modal-profesor">
     <div class="sa-modal">
-      <div class="sa-modal__title">Nuevo profesor</div>
-      <p class="sa-modal__subtitle">Registrá un nuevo docente en el sistema.</p>
+      <div class="sa-modal__title" id="prof-title">Nuevo profesor</div>
+      <p class="sa-modal__subtitle" id="prof-subtitle">Registrá un nuevo docente en el sistema.</p>
       <div class="sa-modal__body">
         <div class="sa-form-row">
           <div class="sa-field">
@@ -171,7 +207,7 @@
           <label class="sa-label" for="campo-prof-materia">Materia</label>
           <input type="text" class="sa-input" id="campo-prof-materia" placeholder="Matemática" autocomplete="off">
         </div>
-        <div class="sa-modal__info">
+        <div class="sa-modal__info" id="prof-info">
           ℹ Se creará una cuenta de profesor en el sistema. El email será usado para iniciar sesión.
         </div>
       </div>
@@ -182,11 +218,11 @@
     </div>
   </div>
 
-  <!-- ── Modal: Crear Clase ─────────────────────────────────────────────── -->
+  <!-- ── Modal: Crear / Editar Clase ────────────────────────────────────── -->
   <div class="sa-overlay hidden" id="modal-clase">
     <div class="sa-modal">
-      <div class="sa-modal__title">Nueva clase</div>
-      <p class="sa-modal__subtitle">Registrá una nueva clase en el sistema.</p>
+      <div class="sa-modal__title" id="clase-title">Nueva clase</div>
+      <p class="sa-modal__subtitle" id="clase-subtitle">Registrá una nueva clase en el sistema.</p>
       <div class="sa-modal__body">
         <div class="sa-field">
           <label class="sa-label" for="campo-clase-nombre">Nombre</label>

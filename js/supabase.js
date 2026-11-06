@@ -181,6 +181,47 @@ const validar = {
   fecha(s) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s || ''))
       return { ok: false, error: 'Fecha inválida.' };
+
+    const fecha = new Date(`${s}T00:00:00`);
+    if (Number.isNaN(fecha.getTime()))
+      return { ok: false, error: 'Fecha inválida.' };
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    if (fecha > hoy)
+      return { ok: false, error: 'La fecha de nacimiento no puede ser futura.' };
+
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const cumpleEsteAnio = new Date(hoy.getFullYear(), fecha.getMonth(), fecha.getDate());
+    if (hoy < cumpleEsteAnio) edad--;
+
+    if (edad < 1)
+      return { ok: false, error: 'La fecha de nacimiento no puede corresponder a un alumno de 0 años.' };
+
+    return { ok: true, value: s };
+  }, 
+  fechaNacimiento(s) {
+    const base = validar.fecha(s);
+    if (!base.ok) return base;
+
+    // Se arma con partes numéricas para evitar desfases de zona horaria
+    const [y, m, d] = s.split('-').map(Number);
+    const nac = new Date(y, m - 1, d);
+    if (nac.getFullYear() !== y || nac.getMonth() !== m - 1 || nac.getDate() !== d)
+      return { ok: false, error: 'La fecha de nacimiento no existe.' };
+
+    const hoy = new Date();
+    const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    if (nac > hoySinHora)
+      return { ok: false, error: 'La fecha de nacimiento no puede ser futura.' };
+
+    let edad = hoySinHora.getFullYear() - y;
+    if (hoySinHora.getMonth() < m - 1 ||
+        (hoySinHora.getMonth() === m - 1 && hoySinHora.getDate() < d)) edad--;
+    if (edad < 1)
+      return { ok: false, error: 'La fecha de nacimiento no es válida: el alumno tendría 0 años.' };
+
     return { ok: true, value: s };
   },
   nota(valor) {
@@ -611,7 +652,7 @@ async function getAlumnosAdminDB() {
 async function crearAlumnoDB(d) {
   if (!d.nombre || !d.apellido) return { ok: false, error: 'Nombre y apellido son obligatorios.' };
   const vdni = validar.dni(d.dni);            if (!vdni.ok) return vdni;
-  const vf = validar.fecha(d.fechaNacimiento); if (!vf.ok) return vf;
+  const vf = validar.fechaNacimiento(d.fechaNacimiento); if (!vf.ok) return vf;
   if (!d.cursoId) return { ok: false, error: 'Tenés que seleccionar una clase.' };
   if (!d.legajo)  return { ok: false, error: 'El legajo es obligatorio.' };
   try {
@@ -640,7 +681,7 @@ async function modificarAlumnoDB(alumnoId, cambios) {
     const v = validar.dni(cambios.dni); if (!v.ok) return v; patch.dni = v.value;
   }
   if (cambios.fechaNacimiento !== undefined) {
-    const v = validar.fecha(cambios.fechaNacimiento); if (!v.ok) return v;
+    const v = validar.fechaNacimiento(cambios.fechaNacimiento); if (!v.ok) return v;
     patch.fecha_nacimiento = v.value;
   }
   if (cambios.cursoId !== undefined) patch.curso_id = cambios.cursoId;

@@ -40,15 +40,34 @@ const state = {
     { id:4, n:'Carlos Díaz',    m:'Ciencias Naturales',  cl:'2° B'       },
   ],
   deleteCallback: null,
+  editClaseId: null,
+  editProfId: null,
+  editDirId: null,
 };
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+const esc = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const val = id => document.getElementById(id).value.trim();
+
+// El directivo que se muestra en el sidebar es el primero de la lista
+function syncDirectivo() {
+  const dirs = state.dirs[state.school.id] || [];
+  state.school.dir = dirs.length ? dirs[0].nombre : null;
+  renderSidebar();
+}
 
 // ── Init ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   renderSidebar();
   renderMain();
   bindNavEvents();
+  bindColegioModalEvents();
   bindCreateModalEvents();
   bindCreateAlumnoModalEvents();
+  bindFichaModalEvents();
   bindCreateProfesorModalEvents();
   bindCreateClaseModalEvents();
   bindDeleteModalEvents();
@@ -108,11 +127,11 @@ function renderSidebar() {
   const list = document.getElementById('school-list');
   list.innerHTML = SCHOOLS.map(s => `
     <div class="sa-school-item ${state.school?.id === s.id ? 'active' : ''}" data-id="${s.id}">
-      <div class="sa-av sa-av--sm">${s.ab}</div>
+      <div class="sa-av sa-av--sm">${esc(s.ab)}</div>
       <div class="sa-school-item__info">
-        <div class="sa-school-item__name">${s.n}</div>
+        <div class="sa-school-item__name">${esc(s.n)}</div>
         <div class="sa-school-item__dir ${s.dir ? '' : 'sa-school-item__dir--warn'}">
-          ${s.dir || 'Sin directivo'}
+          ${esc(s.dir || 'Sin directivo')}
         </div>
       </div>
       <span class="sa-dot ${s.on ? 'sa-dot--on' : 'sa-dot--off'}"></span>
@@ -183,7 +202,7 @@ function renderSchoolPanel() {
   main.innerHTML = `
     <div class="sa-school-panel">
       <div class="sa-panel-title">
-        <span class="sa-panel-title--white">${first} </span><span class="sa-panel-title--violet">${rest}</span>
+        <span class="sa-panel-title--white">${esc(first)} </span><span class="sa-panel-title--violet">${esc(rest)}</span>
       </div>
       <p class="sa-panel-subtitle">Gestioná clases, alumnos, profesores y directivos de este colegio.</p>
 
@@ -219,6 +238,51 @@ function renderTabContent() {
     case 'directivos':  renderDirectivos(el);  break;
     case 'opciones':    renderOpciones(el);    break;
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NUEVO COLEGIO
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openCreateColegioModal() {
+  document.getElementById('campo-col-nombre').value = '';
+  document.getElementById('campo-col-ab').value = '';
+  document.getElementById('btn-col-confirm').disabled = true;
+  document.getElementById('modal-colegio').classList.remove('hidden');
+  document.getElementById('campo-col-nombre').focus();
+}
+
+function closeCreateColegioModal() {
+  document.getElementById('modal-colegio').classList.add('hidden');
+}
+
+function bindColegioModalEvents() {
+  document.getElementById('btn-new-school').addEventListener('click', openCreateColegioModal);
+  document.getElementById('modal-colegio').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateColegioModal();
+  });
+  document.getElementById('btn-col-cancel').addEventListener('click', closeCreateColegioModal);
+  document.getElementById('campo-col-nombre').addEventListener('input', () => {
+    document.getElementById('btn-col-confirm').disabled = !val('campo-col-nombre');
+  });
+
+  document.getElementById('btn-col-confirm').addEventListener('click', () => {
+    const nombre = val('campo-col-nombre');
+    if (SCHOOLS.some(s => s.n.toLowerCase() === nombre.toLowerCase())) {
+      showToast('Ya existe un colegio con ese nombre');
+      return;
+    }
+    const ab = (val('campo-col-ab') ||
+      nombre.split(/\s+/).map(w => w[0]).join('').slice(0, 3)).toUpperCase();
+
+    const nuevo = { id: Date.now(), n: nombre, dir: null, al: 0, pr: 0, cl: 0, on: true, ab };
+    SCHOOLS.push(nuevo);
+    state.dirs[nuevo.id] = [];
+
+    closeCreateColegioModal();
+    renderSidebar();
+    showToast(`✓ Colegio ${nombre} creado exitosamente`);
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -266,21 +330,25 @@ function fillClasesRows(list) {
 
   tbody.innerHTML = list.map(c => `
     <tr>
-      <td class="col-bold">${c.n}</td>
-      <td class="col-muted">${c.nv}</td>
-      <td class="col-muted">${c.t}</td>
-      <td class="col-muted">${c.a}</td>
-      <td>${c.prec}</td>
+      <td class="col-bold">${esc(c.n)}</td>
+      <td class="col-muted">${esc(c.nv)}</td>
+      <td class="col-muted">${esc(c.t)}</td>
+      <td class="col-muted">${esc(c.a)}</td>
+      <td>${esc(c.prec)}</td>
       <td><span class="sa-pill sa-pill--v">${c.al}</span></td>
       <td>
         <div class="sa-actions">
-          <button class="sa-btn sa-btn--primary sa-btn--sm">Editar</button>
+          <button class="sa-btn sa-btn--primary sa-btn--sm btn-edit-clase" data-id="${c.id}">Editar</button>
           <button class="sa-btn sa-btn--ghost-danger sa-btn--sm btn-del-clase"
-            data-id="${c.id}" data-nombre="${c.n}">Eliminar</button>
+            data-id="${c.id}" data-nombre="${esc(c.n)}">Eliminar</button>
         </div>
       </td>
     </tr>
   `).join('');
+
+  tbody.querySelectorAll('.btn-edit-clase').forEach(btn => {
+    btn.addEventListener('click', () => openEditClaseModal(parseInt(btn.dataset.id)));
+  });
 
   tbody.querySelectorAll('.btn-del-clase').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -336,18 +404,22 @@ function fillAlumsRows(list) {
 
   tbody.innerHTML = list.map(a => `
     <tr>
-      <td class="col-main">${a.n}</td>
-      <td class="col-muted">${a.cl}</td>
-      <td class="col-muted">${a.dni}</td>
+      <td class="col-main">${esc(a.n)}</td>
+      <td class="col-muted">${esc(a.cl)}</td>
+      <td class="col-muted">${esc(a.dni)}</td>
       <td>
         <div class="sa-actions">
-          <button class="sa-btn sa-btn--primary sa-btn--sm">Ver ficha</button>
+          <button class="sa-btn sa-btn--primary sa-btn--sm btn-ficha-alum" data-id="${a.id}">Ver ficha</button>
           <button class="sa-btn sa-btn--ghost-danger sa-btn--sm btn-del-alum"
-            data-id="${a.id}" data-nombre="${a.n}">Eliminar</button>
+            data-id="${a.id}" data-nombre="${esc(a.n)}">Eliminar</button>
         </div>
       </td>
     </tr>
   `).join('');
+
+  tbody.querySelectorAll('.btn-ficha-alum').forEach(btn => {
+    btn.addEventListener('click', () => openFichaModal(parseInt(btn.dataset.id)));
+  });
 
   tbody.querySelectorAll('.btn-del-alum').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -363,6 +435,44 @@ function fillAlumsRows(list) {
       );
     });
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FICHA DE ALUMNO
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openFichaModal(id) {
+  const a = state.alums.find(x => x.id === id);
+  if (!a) return;
+
+  let nacimiento = '—', edad = '—';
+  if (a.fecha_nacimiento) {
+    const [y, m, d] = a.fecha_nacimiento.split('-').map(Number);
+    nacimiento = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    const hoy = new Date();
+    let e = hoy.getFullYear() - y;
+    if (hoy.getMonth() < m - 1 || (hoy.getMonth() === m - 1 && hoy.getDate() < d)) e--;
+    edad = `${e} años`;
+  }
+  const alta = a.creado_en ? new Date(a.creado_en).toLocaleDateString('es-AR') : '—';
+
+  document.getElementById('ficha-subtitle').textContent = state.school ? state.school.n : '';
+  document.getElementById('ficha-body').innerHTML = `
+    <dt>Alumno</dt><dd>${esc(a.n)}</dd>
+    <dt>Clase</dt><dd>${esc(a.cl)}</dd>
+    <dt>DNI</dt><dd>${esc(a.dni)}</dd>
+    <dt>Nacimiento</dt><dd>${esc(nacimiento)}</dd>
+    <dt>Edad</dt><dd>${esc(edad)}</dd>
+    <dt>Fecha de alta</dt><dd>${esc(alta)}</dd>`;
+  document.getElementById('modal-ficha').classList.remove('hidden');
+}
+
+function bindFichaModalEvents() {
+  const close = () => document.getElementById('modal-ficha').classList.add('hidden');
+  document.getElementById('modal-ficha').addEventListener('click', e => {
+    if (e.target === e.currentTarget) close();
+  });
+  document.getElementById('btn-ficha-close').addEventListener('click', close);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -402,18 +512,22 @@ function fillProfsRows(list) {
 
   tbody.innerHTML = list.map(p => `
     <tr>
-      <td class="col-main">${p.n}</td>
-      <td class="col-muted">${p.m}</td>
-      <td class="col-muted">${p.cl}</td>
+      <td class="col-main">${esc(p.n)}</td>
+      <td class="col-muted">${esc(p.m)}</td>
+      <td class="col-muted">${esc(p.cl)}</td>
       <td>
         <div class="sa-actions">
-          <button class="sa-btn sa-btn--primary sa-btn--sm">Editar</button>
+          <button class="sa-btn sa-btn--primary sa-btn--sm btn-edit-prof" data-id="${p.id}">Editar</button>
           <button class="sa-btn sa-btn--ghost-danger sa-btn--sm btn-del-prof"
-            data-id="${p.id}" data-nombre="${p.n}">Eliminar</button>
+            data-id="${p.id}" data-nombre="${esc(p.n)}">Eliminar</button>
         </div>
       </td>
     </tr>
   `).join('');
+
+  tbody.querySelectorAll('.btn-edit-prof').forEach(btn => {
+    btn.addEventListener('click', () => openEditProfesorModal(parseInt(btn.dataset.id)));
+  });
 
   tbody.querySelectorAll('.btn-del-prof').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -478,23 +592,30 @@ function renderDirsContent() {
         const initials = d.nombre.split(' ').slice(0, 2).map(w => w[0]).join('');
         return `
           <div class="sa-dir-card">
-            <div class="sa-av sa-av--circle">${initials}</div>
+            <div class="sa-av sa-av--circle">${esc(initials)}</div>
             <div class="sa-dir-card__info">
-              <div class="sa-dir-card__name">${d.nombre}</div>
-              <div class="sa-dir-card__email">${d.email}</div>
+              <div class="sa-dir-card__name">${esc(d.nombre)}</div>
+              <div class="sa-dir-card__email">${esc(d.email)}</div>
             </div>
             <span class="sa-pill sa-pill--green">Directivo</span>
-            <span class="sa-dir-card__since">Desde ${d.desde}</span>
+            <span class="sa-dir-card__since">Desde ${esc(d.desde)}</span>
             <div class="sa-actions">
-              <button class="sa-btn sa-btn--primary sa-btn--sm">Editar</button>
+              <button class="sa-btn sa-btn--primary sa-btn--sm btn-edit-dir" data-id="${d.id}">Editar</button>
               <button class="sa-btn sa-btn--ghost-danger sa-btn--sm btn-revocar"
-                data-id="${d.id}" data-nombre="${d.nombre}">Revocar</button>
+                data-id="${d.id}" data-nombre="${esc(d.nombre)}">Revocar</button>
             </div>
           </div>
         `;
       }).join('')}
     </div>
   `;
+
+  el.querySelectorAll('.btn-edit-dir').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = (state.dirs[state.school.id] || []).find(x => x.id === parseInt(btn.dataset.id));
+      if (d) abrirFormDirectivo(d);
+    });
+  });
 
   el.querySelectorAll('.btn-revocar').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -506,6 +627,7 @@ function renderDirsContent() {
           const sid = state.school.id;
           state.dirs[sid] = state.dirs[sid].filter(d => d.id !== parseInt(btn.dataset.id));
           renderDirsContent();
+          syncDirectivo();
           showToast('Acceso de directivo revocado');
         }
       );
@@ -514,63 +636,88 @@ function renderDirsContent() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MODAL: CREAR DIRECTIVO
+// MODAL: CREAR / EDITAR DIRECTIVO
 // ══════════════════════════════════════════════════════════════════════════════
 
-function openCreateModal() {
-  document.getElementById('modal-create-subtitle').innerHTML =
-    `Se asignará a <strong style="color:#fff">${state.school.n}</strong> y se registrará en Supabase.`;
+const CAMPOS_DIR = ['field-nombre', 'field-apellido', 'field-email', 'field-password'];
 
-  // Limpiar campos
-  ['field-nombre', 'field-apellido', 'field-email', 'field-password'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('btn-create-confirm').disabled = true;
+function validarFormDir() {
+  const editando = state.editDirId !== null;
+  document.getElementById('btn-create-confirm').disabled =
+    !(val('field-nombre') && val('field-apellido') && val('field-email') &&
+      (editando || val('field-password')));
+}
+
+function abrirFormDirectivo(d) {
+  state.editDirId = d ? d.id : null;
+  const [nombre, ...resto] = d ? d.nombre.split(' ') : [''];
+
+  document.getElementById('create-title').textContent =
+    d ? 'Editar cuenta de directivo' : 'Crear cuenta de directivo';
+  document.getElementById('modal-create-subtitle').innerHTML = d
+    ? `Directivo de <strong style="color:#fff">${esc(state.school.n)}</strong>.`
+    : `Se asignará a <strong style="color:#fff">${esc(state.school.n)}</strong> y se registrará en Supabase.`;
+  document.getElementById('create-info').classList.toggle('hidden', !!d);
+  document.getElementById('btn-create-confirm').textContent = d ? 'Guardar cambios' : 'Crear y asignar';
+
+  document.getElementById('field-nombre').value = d ? nombre : '';
+  document.getElementById('field-apellido').value = d ? resto.join(' ') : '';
+  document.getElementById('field-email').value = d ? d.email : '';
+  document.getElementById('field-password').value = '';
+  document.getElementById('field-password').placeholder =
+    d ? 'Dejar vacío para no cambiarla' : 'Mínimo 8 caracteres';
+
+  validarFormDir();
   document.getElementById('modal-create').classList.remove('hidden');
 }
+
+function openCreateModal() { abrirFormDirectivo(null); }
 
 function closeCreateModal() {
   document.getElementById('modal-create').classList.add('hidden');
 }
 
 function bindCreateModalEvents() {
-  // Cerrar al hacer clic en el overlay
   document.getElementById('modal-create').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeCreateModal();
   });
   document.getElementById('btn-create-cancel').addEventListener('click', closeCreateModal);
+  CAMPOS_DIR.forEach(id => document.getElementById(id).addEventListener('input', validarFormDir));
 
-  // Habilitar botón cuando todos los campos tienen valor
-  const fieldIds = ['field-nombre', 'field-apellido', 'field-email', 'field-password'];
-  fieldIds.forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const allFilled = fieldIds.every(f => document.getElementById(f).value.trim() !== '');
-      document.getElementById('btn-create-confirm').disabled = !allFilled;
-    });
-  });
-
-  // Confirmar creación
   document.getElementById('btn-create-confirm').addEventListener('click', () => {
-    const nombre   = document.getElementById('field-nombre').value.trim();
-    const apellido = document.getElementById('field-apellido').value.trim();
-    const email    = document.getElementById('field-email').value.trim();
+    const nombre   = val('field-nombre');
+    const apellido = val('field-apellido');
+    const email    = val('field-email');
+    const pass     = document.getElementById('field-password').value;
+    const sid      = state.school.id;
 
-    const newDir = {
+    if (pass && pass.length < 8) {
+      showToast('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    if (state.editDirId !== null) {
+      const d = (state.dirs[sid] || []).find(x => x.id === state.editDirId);
+      if (!d) return;
+      Object.assign(d, { nombre: `${nombre} ${apellido}`, email });
+      closeCreateModal();
+      if (state.tab === 'directivos') renderDirsContent();
+      syncDirectivo();
+      showToast(`✓ Directivo ${nombre} ${apellido} actualizado`);
+      return;
+    }
+
+    if (!state.dirs[sid]) state.dirs[sid] = [];
+    state.dirs[sid].push({
       id:     Date.now(),
       nombre: `${nombre} ${apellido}`,
       email,
       desde:  new Date().getFullYear().toString(),
-    };
-
-    const sid = state.school.id;
-    if (!state.dirs[sid]) state.dirs[sid] = [];
-    state.dirs[sid].push(newDir);
+    });
 
     closeCreateModal();
-
-    // Refrescar pestaña si está abierta
     if (state.tab === 'directivos') renderDirsContent();
-
+    syncDirectivo();
     showToast(`✓ Cuenta de ${nombre} ${apellido} creada exitosamente`);
   });
 }
@@ -602,8 +749,9 @@ function bindDeleteModalEvents() {
     closeDeleteModal();
   });
 }
+
 // ══════════════════════════════════════════════════════════════════════════════
-// TAB: OPCIONES  
+// TAB: OPCIONES
 // ══════════════════════════════════════════════════════════════════════════════
 
 function renderOpciones(el) {
@@ -667,6 +815,7 @@ function renderOpcionesContent() {
         if (index !== -1) SCHOOLS.splice(index, 1);
         state.school = null;
         state.tab = 'clases';
+        updateNav();
         renderSidebar();
         renderMain();
         showToast(`Colegio ${schoolName} eliminado`);
@@ -680,13 +829,11 @@ function renderOpcionesContent() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function openCreateAlumnoModal() {
-  // Limpiar campos
   document.getElementById('campo-alum-nombre').value = '';
   document.getElementById('campo-alum-apellido').value = '';
   document.getElementById('campo-alum-dni').value = '';
   document.getElementById('campo-alum-fecha').value = '';
-  
-  // Poblar dropdown de cursos
+
   const selectCurso = document.getElementById('campo-alum-curso');
   selectCurso.innerHTML = '<option value="">Seleccioná un curso</option>';
   state.clases.forEach(c => {
@@ -696,7 +843,7 @@ function openCreateAlumnoModal() {
     selectCurso.appendChild(option);
   });
   selectCurso.value = '';
-  
+
   document.getElementById('btn-alum-confirm').disabled = true;
   document.getElementById('modal-alumno').classList.remove('hidden');
 }
@@ -711,27 +858,29 @@ function bindCreateAlumnoModalEvents() {
   });
   document.getElementById('btn-alum-cancel').addEventListener('click', closeCreateAlumnoModal);
 
-  // Validación de campos
   const campos = ['campo-alum-nombre', 'campo-alum-apellido', 'campo-alum-dni', 'campo-alum-fecha', 'campo-alum-curso'];
+  const validar = () => {
+    const dni = document.getElementById('campo-alum-dni').value;
+    const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
+    const dniValid = dni.length === 8 && /^\d+$/.test(dni);
+    document.getElementById('btn-alum-confirm').disabled = !(allFilled && dniValid);
+  };
   campos.forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const dni = document.getElementById('campo-alum-dni').value;
-      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
-      const dniValid = dni.length === 8 && /^\d+$/.test(dni);
-      document.getElementById('btn-alum-confirm').disabled = !(allFilled && dniValid);
-    });
+    const el = document.getElementById(id);
+    el.addEventListener('input', validar);
+    el.addEventListener('change', validar);
   });
 
   document.getElementById('btn-alum-confirm').addEventListener('click', () => {
-    const nombre = document.getElementById('campo-alum-nombre').value.trim();
-    const apellido = document.getElementById('campo-alum-apellido').value.trim();
-    const dni = document.getElementById('campo-alum-dni').value.trim();
+    const nombre = val('campo-alum-nombre');
+    const apellido = val('campo-alum-apellido');
+    const dni = val('campo-alum-dni');
     const fecha = document.getElementById('campo-alum-fecha').value;
     const cursoId = parseInt(document.getElementById('campo-alum-curso').value);
 
     const curso = state.clases.find(c => c.id === cursoId);
     if (!curso) {
-      showToast('Error: selecciona un curso válido');
+      showToast('Error: seleccioná un curso válido');
       return;
     }
 
@@ -753,16 +902,42 @@ function bindCreateAlumnoModalEvents() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MODAL: CREAR PROFESOR
+// MODAL: CREAR / EDITAR PROFESOR
 // ══════════════════════════════════════════════════════════════════════════════
 
-function openCreateProfesorModal() {
-  document.getElementById('campo-prof-nombre').value = '';
-  document.getElementById('campo-prof-apellido').value = '';
-  document.getElementById('campo-prof-email').value = '';
-  document.getElementById('campo-prof-materia').value = '';
-  document.getElementById('btn-prof-confirm').disabled = true;
+const CAMPOS_PROF = ['campo-prof-nombre', 'campo-prof-apellido', 'campo-prof-email', 'campo-prof-materia'];
+
+function validarFormProf() {
+  const email = val('campo-prof-email');
+  const emailOk = state.editProfId !== null ? (!email || email.includes('@')) : email.includes('@');
+  document.getElementById('btn-prof-confirm').disabled =
+    !(val('campo-prof-nombre') && val('campo-prof-apellido') && val('campo-prof-materia') && emailOk);
+}
+
+function abrirFormProfesor(p) {
+  state.editProfId = p ? p.id : null;
+  const [nombre, ...resto] = p ? p.n.split(' ') : [''];
+
+  document.getElementById('prof-title').textContent = p ? 'Editar profesor' : 'Nuevo profesor';
+  document.getElementById('prof-subtitle').textContent =
+    p ? 'Modificá los datos del docente.' : 'Registrá un nuevo docente en el sistema.';
+  document.getElementById('prof-info').classList.toggle('hidden', !!p);
+  document.getElementById('btn-prof-confirm').textContent = p ? 'Guardar cambios' : 'Crear profesor';
+
+  document.getElementById('campo-prof-nombre').value = p ? (p.nombre || nombre) : '';
+  document.getElementById('campo-prof-apellido').value = p ? (p.apellido || resto.join(' ')) : '';
+  document.getElementById('campo-prof-email').value = p ? (p.email || '') : '';
+  document.getElementById('campo-prof-materia').value = p ? p.m : '';
+
+  validarFormProf();
   document.getElementById('modal-profesor').classList.remove('hidden');
+}
+
+function openCreateProfesorModal() { abrirFormProfesor(null); }
+
+function openEditProfesorModal(id) {
+  const p = state.profs.find(x => x.id === id);
+  if (p) abrirFormProfesor(p);
 }
 
 function closeCreateProfesorModal() {
@@ -774,32 +949,34 @@ function bindCreateProfesorModalEvents() {
     if (e.target === e.currentTarget) closeCreateProfesorModal();
   });
   document.getElementById('btn-prof-cancel').addEventListener('click', closeCreateProfesorModal);
-
-  const campos = ['campo-prof-nombre', 'campo-prof-apellido', 'campo-prof-email', 'campo-prof-materia'];
-  campos.forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
-      const emailValid = document.getElementById('campo-prof-email').value.includes('@');
-      document.getElementById('btn-prof-confirm').disabled = !(allFilled && emailValid);
-    });
-  });
+  CAMPOS_PROF.forEach(id => document.getElementById(id).addEventListener('input', validarFormProf));
 
   document.getElementById('btn-prof-confirm').addEventListener('click', () => {
-    const nombre = document.getElementById('campo-prof-nombre').value.trim();
-    const apellido = document.getElementById('campo-prof-apellido').value.trim();
-    const email = document.getElementById('campo-prof-email').value.trim();
-    const materia = document.getElementById('campo-prof-materia').value.trim();
+    const nombre = val('campo-prof-nombre');
+    const apellido = val('campo-prof-apellido');
+    const email = val('campo-prof-email');
+    const materia = val('campo-prof-materia');
 
-    const newProfesor = {
+    if (state.editProfId !== null) {
+      const p = state.profs.find(x => x.id === state.editProfId);
+      if (!p) return;
+      Object.assign(p, { n: `${nombre} ${apellido}`, nombre, apellido, m: materia, email: email || p.email });
+      closeCreateProfesorModal();
+      if (state.tab === 'profesores') renderTabContent();
+      showToast(`✓ Profesor ${nombre} ${apellido} actualizado`);
+      return;
+    }
+
+    state.profs.push({
       id: Date.now(),
       n: `${nombre} ${apellido}`,
+      nombre, apellido,
       m: materia,
       cl: '',
       email,
       creado_en: new Date().toISOString(),
-    };
+    });
 
-    state.profs.push(newProfesor);
     closeCreateProfesorModal();
     if (state.tab === 'profesores') renderTabContent();
     showToast(`✓ Profesor ${nombre} ${apellido} creado exitosamente`);
@@ -807,16 +984,37 @@ function bindCreateProfesorModalEvents() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MODAL: CREAR CLASE
+// MODAL: CREAR / EDITAR CLASE
 // ══════════════════════════════════════════════════════════════════════════════
 
-function openCreateClaseModal() {
-  document.getElementById('campo-clase-nombre').value = '';
-  document.getElementById('campo-clase-nivel').value = '';
-  document.getElementById('campo-clase-turno').value = '';
-  document.getElementById('campo-clase-preceptor').value = '';
-  document.getElementById('btn-clase-confirm').disabled = true;
+const CAMPOS_CLASE = ['campo-clase-nombre', 'campo-clase-nivel', 'campo-clase-turno', 'campo-clase-preceptor'];
+
+function validarFormClase() {
+  document.getElementById('btn-clase-confirm').disabled = !CAMPOS_CLASE.every(val);
+}
+
+function abrirFormClase(c) {
+  state.editClaseId = c ? c.id : null;
+
+  document.getElementById('clase-title').textContent = c ? 'Editar clase' : 'Nueva clase';
+  document.getElementById('clase-subtitle').textContent =
+    c ? 'Modificá los datos de la clase.' : 'Registrá una nueva clase en el sistema.';
+  document.getElementById('btn-clase-confirm').textContent = c ? 'Guardar cambios' : 'Crear clase';
+
+  document.getElementById('campo-clase-nombre').value = c ? c.n : '';
+  document.getElementById('campo-clase-nivel').value = c ? c.nv : '';
+  document.getElementById('campo-clase-turno').value = c ? c.t : '';
+  document.getElementById('campo-clase-preceptor').value = c ? c.prec : '';
+
+  validarFormClase();
   document.getElementById('modal-clase').classList.remove('hidden');
+}
+
+function openCreateClaseModal() { abrirFormClase(null); }
+
+function openEditClaseModal(id) {
+  const c = state.clases.find(x => x.id === id);
+  if (c) abrirFormClase(c);
 }
 
 function closeCreateClaseModal() {
@@ -828,22 +1026,36 @@ function bindCreateClaseModalEvents() {
     if (e.target === e.currentTarget) closeCreateClaseModal();
   });
   document.getElementById('btn-clase-cancel').addEventListener('click', closeCreateClaseModal);
-
-  const campos = ['campo-clase-nombre', 'campo-clase-nivel', 'campo-clase-turno', 'campo-clase-preceptor'];
-  campos.forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const allFilled = campos.every(f => document.getElementById(f).value.trim() !== '');
-      document.getElementById('btn-clase-confirm').disabled = !allFilled;
-    });
+  CAMPOS_CLASE.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', validarFormClase);
+    el.addEventListener('change', validarFormClase);
   });
 
   document.getElementById('btn-clase-confirm').addEventListener('click', () => {
-    const nombre = document.getElementById('campo-clase-nombre').value.trim();
-    const nivel = document.getElementById('campo-clase-nivel').value.trim();
-    const turno = document.getElementById('campo-clase-turno').value.trim();
-    const preceptor = document.getElementById('campo-clase-preceptor').value.trim();
+    const nombre = val('campo-clase-nombre');
+    const nivel = val('campo-clase-nivel');
+    const turno = val('campo-clase-turno');
+    const preceptor = val('campo-clase-preceptor');
 
-    const newClase = {
+    if (state.clases.some(c => c.id !== state.editClaseId && c.n.toLowerCase() === nombre.toLowerCase())) {
+      showToast('Ya existe una clase con ese nombre');
+      return;
+    }
+
+    if (state.editClaseId !== null) {
+      const c = state.clases.find(x => x.id === state.editClaseId);
+      if (!c) return;
+      const viejo = c.n;
+      Object.assign(c, { n: nombre, nv: nivel, t: turno, prec: preceptor });
+      state.alums.forEach(a => { if (a.cl === viejo) a.cl = nombre; }); // mantiene la clase de los alumnos
+      closeCreateClaseModal();
+      if (state.tab === 'clases') renderTabContent();
+      showToast(`✓ Clase ${nombre} actualizada`);
+      return;
+    }
+
+    state.clases.push({
       id: Date.now(),
       n: nombre,
       nv: nivel,
@@ -852,9 +1064,8 @@ function bindCreateClaseModalEvents() {
       prec: preceptor,
       al: 0,
       creado_en: new Date().toISOString(),
-    };
+    });
 
-    state.clases.push(newClase);
     closeCreateClaseModal();
     if (state.tab === 'clases') renderTabContent();
     showToast(`✓ Clase ${nombre} creada exitosamente`);
@@ -869,8 +1080,8 @@ let toastTimer = null;
 
 function showToast(msg) {
   const el = document.getElementById('sa-toast');
-  el.textContent = msg;
   el.classList.remove('hidden');
+  el.textContent = msg;
   el.classList.add('sa-toast--visible');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
