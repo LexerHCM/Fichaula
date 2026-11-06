@@ -107,16 +107,6 @@ fichaula/
 
 ---
 
-## Puesta en marcha
-
-1. **Base de datos**: corré los scripts de `sql/` en orden (01 → 06) en tu proyecto
-   Supabase y creá los usuarios de Auth. Si la base ya existía de una versión
-   anterior, alcanza con correr el 07. El detalle está en **[GUIA-SETUP.md](GUIA-SETUP.md)**.
-2. **Frontend**: editá `SUPABASE_URL` y `SUPABASE_ANON_KEY` al inicio de
-   `js/supabase.js` con los datos de tu proyecto y publicá la carpeta como sitio
-   estático (GitHub Pages, Netlify, o cualquier hosting de archivos).
-
----
 
 ## Seguridad
 
