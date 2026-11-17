@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.eliminar-preceptor]
 verify_jwt = true
+
+[functions.eliminar-colegio]
+verify_jwt = true

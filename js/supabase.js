@@ -55,9 +55,9 @@ function _headers(extra) {
  * para que las capas superiores puedan distinguir 401, 404, etc.
  * Nunca loguea tokens ni contraseñas.
  */
-async function _fetch(url, options) {
+async function _fetch(url, options, timeoutMs = SB_TIMEOUT_MS) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), SB_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, Object.assign({}, options, { signal: ctrl.signal }));
     return res;
@@ -138,13 +138,13 @@ const sb = {
   delete(path)     { return sb._req('DELETE', path); },
   /** Llama a una función de Postgres (RPC). Corre en una transacción. */
   rpc(fn, args)    { return sb._req('POST', `rpc/${fn}`, args || {}); },
-  async invoke(fn, args) {
+  async invoke(fn, args, timeoutMs = SB_TIMEOUT_MS) {
     const url = `${SUPABASE_URL}/functions/v1/${encodeURIComponent(fn)}`;
     const request = () => _fetch(url, {
       method: 'POST',
       headers: _headers(),
       body: JSON.stringify(args || {})
-    });
+    }, timeoutMs);
     let res = await request();
     let functionError = false;
     if (res.status === 401) {
@@ -1213,10 +1213,13 @@ async function importarColegioExcelDB(colegioId, datos) {
   }
 }
 
-async function eliminarColegioSuperadminDB(colegioId) {
+async function eliminarColegioSuperadminDB(colegioId, password) {
   try {
-    await sb.rpc('eliminar_colegio_superadmin', { p_colegio_id: colegioId });
-    return { ok: true };
+    const data = await sb.invoke('eliminar-colegio', {
+      colegio_id: colegioId,
+      password
+    }, 60000);
+    return { ok: true, data };
   } catch (e) {
     return { ok: false, error: _msg(e) };
   }

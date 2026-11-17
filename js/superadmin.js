@@ -2,43 +2,17 @@
 // superadmin.js — FichAula Gestión de Colegios (Superadmin)
 // ============================================================
 
-// ── Datos de colegios (estático, viene de la BD en producción) ─────────────
-const SCHOOLS = [
-  { id:1, n:'ISCJ Hurlingham',   dir:'Ana Martínez', al:245, pr:18, cl:12, on:true,  ab:'IH'  },
-  { id:2, n:'Escuela N°14',      dir:'Carlos Sosa',  al:180, pr:14, cl:9,  on:true,  ab:'E14' },
-  { id:3, n:'Inst. San José',    dir:null,           al:310, pr:22, cl:15, on:true,  ab:'ISJ' },
-  { id:4, n:'Colegio del Norte', dir:null,           al:95,  pr:8,  cl:6,  on:false, ab:'CN'  },
-];
+// La lista se completa con los colegios persistidos en Supabase.
+const SCHOOLS = [];
 
 // ── Estado global ───────────────────────────────────────────────────────────
 const state = {
   school: null,
   tab: 'clases',
-  dirs: {
-    1: [{ id:1, nombre:'Ana Martínez',  email:'ana@iscj.edu.ar',   desde:'2023' }],
-    2: [{ id:2, nombre:'Carlos Sosa',   email:'carlos@e14.edu.ar', desde:'2022' }],
-    3: [],
-    4: [],
-  },
-  clases: [
-    { id:1, n:'1° A', nv:'Primer Año',  t:'Mañana', a:'101', prec:'María González', al:8  },
-    { id:2, n:'1° B', nv:'Primer Año',  t:'Tarde',  a:'102', prec:'Juan Pérez',     al:7  },
-    { id:3, n:'2° A', nv:'Segundo Año', t:'Mañana', a:'201', prec:'Laura Torres',   al:9  },
-    { id:4, n:'2° B', nv:'Segundo Año', t:'Tarde',  a:'202', prec:'Carlos Díaz',    al:11 },
-  ],
-  alums: [
-    { id:1, n:'Gómez, Lucas',     cl:'1° A', dni:'44.123.456' },
-    { id:2, n:'Rodríguez, Sofía', cl:'1° B', dni:'44.234.567' },
-    { id:3, n:'López, Martín',    cl:'2° A', dni:'43.345.678' },
-    { id:4, n:'Fernández, Lucía', cl:'2° B', dni:'43.456.789' },
-    { id:5, n:'García, Tomás',    cl:'1° A', dni:'44.567.890' },
-  ],
-  profs: [
-    { id:1, n:'María González', m:'Lengua y Literatura', cl:'1° A, 1° B' },
-    { id:2, n:'Juan Pérez',     m:'Matemática',          cl:'1° B, 2° A' },
-    { id:3, n:'Laura Torres',   m:'Historia',            cl:'2° A, 2° B' },
-    { id:4, n:'Carlos Díaz',    m:'Ciencias Naturales',  cl:'2° B'       },
-  ],
+  dirs: {},
+  clases: [],
+  alums: [],
+  profs: [],
   preceptores: [],
   deleteCallback: null,
   importacionPendiente: null,
@@ -90,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCreateProfesorModalEvents();
   bindCreatePreceptorModalEvents();
   bindDeletePreceptorModalEvents();
+  bindDeleteSchoolModalEvents();
   bindCreateClaseModalEvents();
   bindDeleteModalEvents();
   bindImportarExcelEvents();
@@ -1213,7 +1188,7 @@ function renderOpcionesContent() {
       <div class="sa-options-card sa-options-card--danger">
         <div>
           <div class="sa-options-label">Eliminar colegio</div>
-          <div class="sa-options-text">Esta acción eliminará el colegio seleccionado y lo quitará del panel.</div>
+          <div class="sa-options-text">Eliminará permanentemente el colegio y sus clases, alumnos, cuentas de personal y registros asociados.</div>
         </div>
         <button class="sa-btn sa-btn--ghost-danger sa-btn--sm" id="btn-delete-school">Eliminar colegio</button>
       </div>
@@ -1263,32 +1238,96 @@ function renderOpcionesContent() {
   });
 
   document.getElementById('btn-delete-school')?.addEventListener('click', () => {
-    openDeleteModal(
-      '¿Eliminar este colegio?',
-      state.school.n,
-      'Sí, eliminar',
-      async () => {
-        const schoolId = state.school.id;
-        const schoolName = state.school.n;
-        if (state.school.persistido) {
-          const resultado = await eliminarColegioSuperadminDB(schoolId);
-          if (!resultado.ok) {
-            showToast(`No se pudo eliminar el colegio: ${resultado.error}`);
-            return;
-          }
-        }
-        const index = SCHOOLS.findIndex(s => s.id === schoolId);
-        if (index !== -1) SCHOOLS.splice(index, 1);
-        delete state.dirs[schoolId];
-        delete datosPorColegio[schoolId];
-        state.school = null;
-        state.tab = 'clases';
-        updateNav();
-        renderSidebar();
-        renderMain();
-        showToast(`Colegio ${schoolName} eliminado`);
-      }
-    );
+    openDeleteSchoolModal();
+  });
+}
+
+let colegioAEliminar = null;
+let eliminandoColegio = false;
+
+function openDeleteSchoolModal() {
+  const school = state.school;
+  if (!school) return;
+  if (!school.persistido) {
+    showToast('Este colegio de demostración no está guardado en Supabase.');
+    return;
+  }
+
+  colegioAEliminar = { id: school.id, nombre: school.n };
+  document.getElementById('delete-school-name').textContent =
+    `Vas a eliminar permanentemente ${school.n} y todos sus datos.`;
+  document.getElementById('delete-school-password').value = '';
+  document.getElementById('delete-school-error').textContent = '';
+  document.getElementById('delete-school-error').classList.add('hidden');
+  document.getElementById('btn-delete-school-confirm').disabled = false;
+  document.getElementById('btn-delete-school-confirm').textContent = 'Confirmar eliminación';
+  document.getElementById('modal-delete-school').classList.remove('hidden');
+  document.getElementById('delete-school-password').focus();
+}
+
+function bindDeleteSchoolModalEvents() {
+  const overlay = document.getElementById('modal-delete-school');
+  const passwordInput = document.getElementById('delete-school-password');
+  const errorBox = document.getElementById('delete-school-error');
+  const confirmButton = document.getElementById('btn-delete-school-confirm');
+  const close = () => {
+    if (eliminandoColegio) return;
+    overlay.classList.add('hidden');
+    passwordInput.value = '';
+    errorBox.textContent = '';
+    errorBox.classList.add('hidden');
+    colegioAEliminar = null;
+  };
+
+  overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
+  document.getElementById('btn-delete-school-cancel').addEventListener('click', close);
+  passwordInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      confirmButton.click();
+    }
+  });
+  confirmButton.addEventListener('click', async () => {
+    if (!colegioAEliminar || eliminandoColegio) return;
+    const password = passwordInput.value;
+    if (!password) {
+      errorBox.textContent = 'Ingresá tu contraseña actual para confirmar.';
+      errorBox.classList.remove('hidden');
+      passwordInput.focus();
+      return;
+    }
+
+    eliminandoColegio = true;
+    confirmButton.disabled = true;
+    confirmButton.textContent = 'Eliminando...';
+    errorBox.textContent = '';
+    errorBox.classList.add('hidden');
+
+    const school = colegioAEliminar;
+    const resultado = await eliminarColegioSuperadminDB(school.id, password);
+    if (!resultado.ok) {
+      eliminandoColegio = false;
+      confirmButton.disabled = false;
+      confirmButton.textContent = 'Confirmar eliminación';
+      passwordInput.value = '';
+      errorBox.textContent = resultado.error;
+      errorBox.classList.remove('hidden');
+      passwordInput.focus();
+      return;
+    }
+
+    eliminandoColegio = false;
+    close();
+    const index = SCHOOLS.findIndex(item => item.id === school.id);
+    if (index !== -1) SCHOOLS.splice(index, 1);
+    delete state.dirs[school.id];
+    delete datosPorColegio[school.id];
+    state.school = null;
+    state.tab = 'clases';
+    updateNav();
+    renderSidebar();
+    renderMain();
+    showToast(`Colegio ${school.nombre} y sus datos eliminados`);
   });
 }
 

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FichAula — Gestión de Colegios</title>
+  <link rel="stylesheet" href="../css/superadmin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── Nav ────────────────────────────────────────────────────────────── -->
+  <header class="sa-nav">
+    <div class="sa-nav__left">
+        <span class="sa-logo">
+          <a class="navurl" href="superadmin.html">
+          <span class="sa-logo--white">Fich</span><span class="sa-logo--violet">aula</span>
+        </a></span>
+
+      <div class="sa-breadcrumb hidden" id="sa-breadcrumb">
+        <span class="sa-breadcrumb__sep">│</span>
+        <button class="sa-breadcrumb__back" id="btn-back">← Colegios</button>
+        <span class="sa-breadcrumb__slash">/</span>
+        <span class="sa-breadcrumb__school" id="breadcrumb-school"></span>
+      </div>
+    </div>
+    <div class="dropdown sa-nav__dropdown">
+      <div class="sa-nav__user" id="sa-user-menu-trigger">
+        <div class="sa-user-avatar">SA</div>
+        <div>
+          <div class="sa-user-name">Sistema FichAula</div>
+          <div class="sa-user-role">Superadministrador</div>
+        </div>
+      </div>
+      <div class="dropdown-content">
+        <a href="../index.html">Preview</a>
+        <a href="#" onclick="cerrarSesion(); return false;">Cerrar Sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Layout ─────────────────────────────────────────────────────────── -->
+  <div class="sa-layout">
+
+    <!-- Sidebar -->
+    <aside class="sa-sidebar">
+      <div class="sa-sidebar__header">
+        <div class="sa-sidebar__label">Colegios (<span id="school-count">0</span>)</div>
+        <button class="sa-btn sa-btn--primary sa-btn--full" id="btn-new-school">+ Nuevo colegio</button>
+      </div>
+      <div class="sa-sidebar__list" id="school-list"></div>
+      <div class="sa-sidebar__stats" id="sidebar-stats"></div>
+    </aside>
+
+    <!-- Main -->
+    <main class="sa-main" id="sa-main"></main>
+
+  </div>
+
+  <!-- ── Modal: Crear / Editar Directivo ────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-create">
+    <div class="sa-modal">
+      <div class="sa-modal__title" id="create-title">Crear cuenta de directivo</div>
+      <p class="sa-modal__subtitle" id="modal-create-subtitle"></p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="field-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="field-nombre" placeholder="Juan" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="field-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="field-apellido" placeholder="García" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="field-email">Email institucional</label>
+          <input type="email" class="sa-input" id="field-email" placeholder="directivo@colegio.edu.ar" autocomplete="off">
+        </div>
+        <div class="sa-field" id="field-password-container">
+          <label class="sa-label" for="field-password">Contraseña temporal</label>
+          <input type="password" class="sa-input" id="field-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        </div>
+        <div class="sa-modal__info" id="create-info">
+          ℹ Se creará el acceso en <strong>Supabase Auth</strong> y el perfil de
+          <strong>directivo</strong> quedará asociado a este colegio.
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-create-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-create-confirm" disabled>Crear y asignar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirmar Eliminación ───────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-delete">
+    <div class="sa-modal sa-modal--centered">
+      <div class="sa-delete-icon">⚠️</div>
+      <div class="sa-modal__title" id="delete-question"></div>
+      <p class="sa-delete-body">
+        Estás a punto de hacer esto con <strong id="delete-nombre"></strong>.<br>
+        <span class="sa-delete-warn">Esta acción no se puede deshacer.</span>
+      </p>
+      <div class="sa-modal__footer sa-modal__footer--center">
+        <button class="sa-btn sa-btn--secondary" id="btn-delete-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--danger" id="btn-delete-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirmar eliminación de colegio ─────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-delete-school">
+    <div class="sa-modal sa-modal--centered">
+      <div class="sa-delete-icon">⚠️</div>
+      <div class="sa-modal__title">Eliminar colegio</div>
+      <p class="sa-modal__subtitle" id="delete-school-name"></p>
+      <p class="sa-delete-body">
+        Se eliminarán sus clases, alumnos, profesores, preceptores, directivos y datos asociados.
+        <span class="sa-delete-warn">Esta acción no se puede deshacer.</span>
+      </p>
+      <div class="sa-field">
+        <label class="sa-label" for="delete-school-password">Tu contraseña actual</label>
+        <input type="password" class="sa-input" id="delete-school-password" autocomplete="current-password">
+      </div>
+      <p class="sa-delete-school-error hidden" id="delete-school-error" role="alert"></p>
+      <div class="sa-modal__footer sa-modal__footer--center">
+        <button class="sa-btn sa-btn--secondary" id="btn-delete-school-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--danger" id="btn-delete-school-confirm">Confirmar eliminación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Colegio ───────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-colegio">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nuevo colegio</div>
+      <p class="sa-modal__subtitle">Registrá un nuevo colegio en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-field">
+          <label class="sa-label" for="campo-col-nombre">Nombre</label>
+          <input type="text" class="sa-input" id="campo-col-nombre" placeholder="Colegio San Martín" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-col-ab">Sigla (opcional, hasta 4 letras)</label>
+          <input type="text" class="sa-input" id="campo-col-ab" placeholder="CSM" maxlength="4" autocomplete="off">
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-col-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-col-confirm" disabled>Crear colegio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Alumno ────────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-alumno">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nuevo alumno</div>
+      <p class="sa-modal__subtitle">Registrá un nuevo estudiante en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-alum-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-alum-nombre" placeholder="Juan" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-alum-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-alum-apellido" placeholder="García" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-dni">DNI (8 dígitos, sin puntos)</label>
+          <input type="text" class="sa-input" id="campo-alum-dni" placeholder="44123456" autocomplete="off" maxlength="8">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-fecha">Fecha de nacimiento</label>
+          <input type="date" class="sa-input" id="campo-alum-fecha">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-alum-curso">Asignar a curso</label>
+          <select class="sa-input" id="campo-alum-curso">
+            <option value="">Seleccioná un curso</option>
+          </select>
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-alum-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-alum-confirm" disabled>Crear alumno</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Ficha de alumno ─────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-ficha">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Ficha del alumno</div>
+      <p class="sa-modal__subtitle" id="ficha-subtitle"></p>
+      <div class="sa-modal__body">
+        <dl class="sa-ficha" id="ficha-body"></dl>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-ficha-close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear / Editar Profesor ─────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-profesor">
+    <div class="sa-modal">
+      <div class="sa-modal__title" id="prof-title">Nuevo profesor</div>
+      <p class="sa-modal__subtitle" id="prof-subtitle">Registrá un nuevo docente en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-prof-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-prof-nombre" placeholder="María" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-prof-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-prof-apellido" placeholder="González" autocomplete="off">
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-prof-email">Email institucional</label>
+          <input type="email" class="sa-input" id="campo-prof-email" placeholder="profesor@colegio.edu.ar" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-prof-materia">Materia</label>
+          <input type="text" class="sa-input" id="campo-prof-materia" placeholder="Matemática" autocomplete="off">
+        </div>
+        <div id="prof-account-fields">
+          <div class="sa-form-row">
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-dni">DNI</label>
+              <input type="text" class="sa-input" id="campo-prof-dni" maxlength="12" inputmode="numeric">
+            </div>
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-fecha">Fecha de nacimiento</label>
+              <input type="date" class="sa-input" id="campo-prof-fecha">
+            </div>
+          </div>
+          <div class="sa-form-row">
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-telefono">Teléfono</label>
+              <input type="tel" class="sa-input" id="campo-prof-telefono" maxlength="30">
+            </div>
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-password">Contraseña temporal (mínimo 8 caracteres)</label>
+              <input type="password" class="sa-input" id="campo-prof-password" minlength="8" autocomplete="new-password">
+            </div>
+          </div>
+        </div>
+        <div class="sa-modal__info" id="prof-info">
+          ℹ Se creará una cuenta en Supabase Auth. Compartí la contraseña temporal por un canal seguro.
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-prof-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-prof-confirm" disabled>Crear profesor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Preceptor ─────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-preceptor">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nueva cuenta de preceptor/a</div>
+      <p class="sa-modal__subtitle" id="preceptor-subtitle"></p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-pre-nombre" maxlength="100">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-pre-apellido" maxlength="100">
+          </div>
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-dni">DNI</label>
+            <input type="text" class="sa-input" id="campo-pre-dni" maxlength="12" inputmode="numeric">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-fecha">Fecha de nacimiento</label>
+            <input type="date" class="sa-input" id="campo-pre-fecha">
+          </div>
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-telefono">Teléfono</label>
+            <input type="tel" class="sa-input" id="campo-pre-telefono" maxlength="30">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-email">Email de acceso</label>
+            <input type="email" class="sa-input" id="campo-pre-email" maxlength="254">
+          </div>
+        </div>
+        <div class="sa-field" id="campo-pre-password-wrap">
+          <label class="sa-label" for="campo-pre-password">Contraseña temporal (mínimo 8 caracteres)</label>
+          <input type="password" class="sa-input" id="campo-pre-password" minlength="8" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-pre-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-pre-confirm">Crear preceptor/a</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirmar eliminación de preceptor ─────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-delete-preceptor">
+    <div class="sa-modal sa-modal--centered">
+      <div class="sa-modal__title">Eliminar cuenta de preceptor/a</div>
+      <p class="sa-modal__subtitle" id="delete-preceptor-name"></p>
+      <div class="sa-field">
+        <label class="sa-label" for="delete-preceptor-password">Tu contraseña actual</label>
+        <input type="password" class="sa-input" id="delete-preceptor-password" autocomplete="current-password">
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-pre-delete-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--danger" id="btn-pre-delete-confirm">Confirmar eliminación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear / Editar Clase ────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-clase">
+    <div class="sa-modal">
+      <div class="sa-modal__title" id="clase-title">Nueva clase</div>
+      <p class="sa-modal__subtitle" id="clase-subtitle">Registrá una nueva clase en el sistema.</p>
+      <div class="sa-modal__body">
+        <div class="sa-field">
+          <label class="sa-label" for="campo-clase-nombre">Nombre</label>
+          <input type="text" class="sa-input" id="campo-clase-nombre" placeholder="1° A" autocomplete="off">
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-clase-nivel">Nivel</label>
+            <input type="text" class="sa-input" id="campo-clase-nivel" placeholder="Primer Año" autocomplete="off">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-clase-turno">Turno</label>
+            <select class="sa-input" id="campo-clase-turno">
+              <option value="">Seleccionar</option>
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+            </select>
+          </div>
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-clase-aula">Aula</label>
+          <input type="text" class="sa-input" id="campo-clase-aula" placeholder="101" autocomplete="off">
+        </div>
+        <div class="sa-field">
+          <label class="sa-label" for="campo-clase-preceptor">Preceptor/a</label>
+          <select class="sa-input" id="campo-clase-preceptor">
+            <option value="">Sin asignar</option>
+          </select>
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-clase-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-clase-confirm" disabled>Crear clase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────────────────────── -->
+  <div class="sa-toast hidden" id="sa-toast"></div>
+  <input type="file" id="input-importar-excel" accept=".xlsx,.xls" hidden>
+
+  <script src="../js/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="../js/importador-excel.js"></script>
+  <script src="../js/superadmin.js"></script>
+</body>
+</html>
