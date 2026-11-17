@@ -189,6 +189,7 @@ Después de ejecutar el Paso D, aplicá las migraciones nuevas en este orden:
    supabase functions deploy eliminar-profesor
    supabase functions deploy crear-preceptor
    supabase functions deploy eliminar-preceptor
+   supabase functions deploy eliminar-colegio
    ```
 
 Las claves `service_role` solo deben estar configuradas como secretos de Supabase
@@ -208,6 +209,13 @@ superadmin pueden revisar y editar la asistencia del colegio correspondiente.
 Para habilitar la importación de cuentas desde Excel, después de ejecutar
 `sql/09b_preceptores_asistencia.sql` ejecutá `sql/10_importacion_cuentas_excel.sql`
 y desplegá `importar-colegio-excel`.
+
+Para habilitar la eliminación completa de un colegio, ejecutá
+`sql/11_eliminar_colegio_integral.sql` y desplegá `eliminar-colegio`. La función
+solicita la contraseña actual del superadmin, revoca las cuentas del personal,
+elimina los adjuntos de asistencia y luego borra los datos del colegio. La
+migración reserva la RPC de borrado para `service_role`; la interfaz la llama
+solo mediante la Edge Function autenticada.
 
 **No desplegamos ni ejecutamos estas migraciones contra tu proyecto Supabase.**
 Antes de probar, verificá el resultado en SQL Editor y después iniciá sesión con
@@ -238,6 +246,8 @@ En **SQL Editor**, corré los scripts de `sql/` **en este orden**:
     y bucket privado. Requiere que 09a ya esté confirmado.
 11. **`10_importacion_cuentas_excel.sql`** — actualiza la importación para asociar
     las cuentas de profesores y preceptores creadas desde la plantilla.
+12. **`11_eliminar_colegio_integral.sql`** — elimina datos activos y archivados
+    de colegios, incluidos registros de preceptores y asistencias.
 
 > **`07_privacidad_seguimientos.sql` no hace falta en una base nueva:** los scripts
 > 01 a 03 ya traen todo. El 07 es la actualización para una base creada con la

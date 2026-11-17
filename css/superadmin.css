@@ -499,6 +499,7 @@ select.sa-input {
 }
 .sa-delete-body { font-size: 13px; color: var(--muted); line-height: 1.65; margin: 10px 0 26px; }
 .sa-delete-warn { color: rgba(239,68,68,0.85); }
+.sa-delete-school-error { color: #ff6b6b; font-size: 12px; margin: 10px 0 0; }
 
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .sa-toast {
