@@ -5,7 +5,7 @@
  * las tres pantallas busquen y filtren igual.
  *
  *   - buscarAlumnos        → búsqueda por nombre, apellido, curso
- *                            y (solo dirección) legajo o DNI.
+ *                            y, según permisos, legajo o DNI.
  *   - filtrarSeguimientos  → nota, alumno, profesor, fecha, categoría
  *                            y texto libre.
  *   - leerFiltros / conectarFiltros / llenarSelectFiltro
@@ -90,19 +90,23 @@ function _palabrasDeBusqueda(consulta) {
  *   - está contenida en el nombre o en el apellido,
  *   - es el curso del alumno ("2a", "2°A", "2° A", "2 a") o solo su
  *     año ("2", "2°"),
- *   - y, solo si opciones.identificadores es true (dirección):
+ *   - y, si están habilitados en opciones:
  *       · es su legajo ("16" y "016" son el mismo), o
  *       · es el comienzo de su DNI, con o sin puntos (4 dígitos o más).
  *
  * @param {Array<object>} lista  filas de vista_alumnos_completa
  * @param {string} consulta
- * @param {{identificadores?: boolean}} [opciones]
+ * @param {{identificadores?: boolean, legajo?: boolean, dni?: boolean}} [opciones]
  * @returns {Array<object>} nueva lista, en el mismo orden
  */
 function buscarAlumnos(lista, consulta, opciones) {
   const palabras = _palabrasDeBusqueda(consulta);
   if (palabras.length === 0) return lista.slice();
   const conIdentificadores = !!(opciones && opciones.identificadores);
+  const conLegajo = opciones && opciones.legajo !== undefined
+    ? opciones.legajo : conIdentificadores;
+  const conDni = opciones && opciones.dni !== undefined
+    ? opciones.dni : conIdentificadores;
 
   return lista.filter(a => {
     const nombre = normalizarTexto(a.nombre);
@@ -118,13 +122,12 @@ function buscarAlumnos(lista, consulta, opciones) {
       if (nombre.includes(p) || apellido.includes(p)) return true;
       if (p === curso) return true;
       if (anio && p.replace(/[°º]$/, '') === anio) return true;
-      if (!conIdentificadores) return false;
-
       const digitos = p.replace(/\./g, '');
-      if (!/^\d+$/.test(digitos)) return p === legajo;
-      if (/^\d+$/.test(legajo) && parseInt(digitos, 10) === parseInt(legajo, 10)) return true;
+      if (conLegajo && !/^\d+$/.test(digitos) && p === legajo) return true;
+      if (conLegajo && /^\d+$/.test(legajo) && /^\d+$/.test(digitos)
+          && parseInt(digitos, 10) === parseInt(legajo, 10)) return true;
       const pareceDni = digitos.length >= 4 || p.includes('.');
-      return pareceDni && dni.startsWith(digitos);
+      return conDni && pareceDni && dni.startsWith(digitos);
     });
   });
 }

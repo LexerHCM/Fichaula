@@ -281,6 +281,16 @@ html, body {
 .sa-btn--ghost-danger       { background: rgba(239,68,68,0.12); color: var(--red); }
 .sa-btn--sm                 { padding: 5px 11px; font-size: 11px; }
 .sa-btn--full               { width: 100%; padding: 7px; font-size: 12px; }
+.sa-btn.btn-ficha {
+  border: 1px solid rgba(196,190,255,0.28);
+  background: linear-gradient(135deg, #7168d8, #8b7ff0);
+  box-shadow: 0 4px 12px rgba(89,78,190,0.2);
+}
+.sa-btn.btn-ficha:hover {
+  opacity: 1;
+  background: linear-gradient(135deg, #8076e5, #9a8ff5);
+  box-shadow: 0 7px 16px rgba(89,78,190,0.3);
+}
 
 /* ── Input ────────────────────────────────────────────────────────────────── */
 .sa-input {
@@ -343,6 +353,55 @@ select.sa-input {
   color: var(--muted);
   max-width: 420px;
   line-height: 1.4;
+}
+
+.sa-options-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sa-import-result {
+  margin-top: 16px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.sa-import-result > div {
+  display: grid;
+  gap: 5px;
+}
+
+.sa-import-result span,
+.sa-import-result li {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sa-import-result ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.sa-import-result--error {
+  align-items: flex-start;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+@media (max-width: 640px) {
+  .sa-options-card,
+  .sa-import-result {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .sa-toggle {
@@ -464,3 +523,25 @@ select.sa-input {
 .sa-ficha { display: grid; grid-template-columns: 130px 1fr; gap: 10px 16px; font-size: 13px; }
 .sa-ficha dt { color: var(--muted); }
 .sa-ficha dd { margin: 0; color: #fff; font-weight: 600; word-break: break-word; }
+
+.sa-ciclo-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 18px 0;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.sa-ciclo-card strong { display: block; margin-bottom: 5px; }
+.sa-ciclo-card p { color: #fff; font-size: 13px; }
+.sa-ciclo-card small { display: block; margin-top: 5px; color: var(--muted); }
+.sa-ciclo-controls { display: flex; align-items: center; gap: 8px; }
+.sa-ciclo-controls .sa-input { width: 110px; }
+@media (max-width: 700px) {
+  .sa-ciclo-card { align-items: stretch; flex-direction: column; }
+  .sa-ciclo-controls { width: 100%; }
+  .sa-ciclo-controls .sa-input { flex: 1; }
+}

@@ -9,7 +9,7 @@
  * IMPORTANTE: estos chequeos son de UX. La autorización real la
  * aplica Row Level Security en Supabase con el JWT del usuario.
  *
- * Roles: 'superadmin' | 'admin' | 'profesor'
+ * Roles: 'superadmin' | 'admin' | 'profesor' | 'preceptor'
  * Depende de: supabase.js (iniciarSesion guarda el perfil que
  * devuelve validarCredencialesDB; logoutDB cierra en el servidor).
  * ═══════════════════════════════════════════════════════════
@@ -30,6 +30,7 @@ function iniciarSesion(perfil) {
     apellido: perfil.apellido,
     rol: perfil.rol,
     materia: perfil.materia || null,
+    colegio_id: perfil.colegio_id || null,
     cargo: perfil.cargo || null
   };
   sessionStorage.setItem(SB_PERFIL_KEY, JSON.stringify(payload));
@@ -103,17 +104,23 @@ function esProfesor() {
   const u = getUsuarioActual();
   return !!u && u.rol === 'profesor';
 }
+function esPreceptor() {
+  const u = getUsuarioActual();
+  return !!u && u.rol === 'preceptor';
+}
 
-/** Solo admin/superadmin ven el legajo. */
-function puedeVerLegajo()        { return esAdmin(); }
+/** Solo superadmin ve el legajo. */
+function puedeVerLegajo()        { return esSuperadmin(); }
+/** DNI sigue visible para administración. */
+function puedeVerDni()           { return esAdmin(); }
 /** Solo admin/superadmin editan datos del alumno. */
 function puedeEditarAlumno()     { return esAdmin(); }
 /** Solo admin/superadmin gestionan clases. */
 function puedeGestionarClases()  { return esAdmin(); }
-/** Solo profesores cargan seguimientos. */
-function puedeAgregarSeguimiento() { return esProfesor(); }
-/** Solo profesores dejan comentarios. */
-function puedeComentar()         { return esProfesor(); }
+/** Profesores y preceptores cargan seguimientos y comentarios. */
+function puedeAgregarSeguimiento() { return esProfesor() || esPreceptor(); }
+function puedeComentar()           { return esProfesor() || esPreceptor(); }
+function puedeEditarAsistencia()   { return esAdmin() || esProfesor() || esPreceptor(); }
 
 /**
  * Un seguimiento lo elimina su autor (profesor) o dirección
@@ -123,5 +130,7 @@ function puedeComentar()         { return esProfesor(); }
 function puedeEliminarSeguimiento(seguimiento) {
   const u = getUsuarioActual();
   if (!u || !seguimiento) return false;
-  return esAdmin() || (u.rol === 'profesor' && seguimiento.profesor_id === u.id);
+  return esAdmin() ||
+    ((u.rol === 'profesor' || u.rol === 'preceptor') &&
+      (seguimiento.profesor_id === u.id || seguimiento.autor_id === u.id));
 }

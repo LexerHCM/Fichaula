@@ -1,7 +1,7 @@
 /**
  * curso.js — Detalle de un curso.
- *  - Tabla de alumnos con búsqueda (el legajo y el DNI solo los ve y
- *    los busca dirección).
+ *  - Tabla de alumnos con búsqueda (el legajo solo lo ve superadmin;
+ *    el DNI lo ve dirección).
  *  - Seguimientos:
  *      · el profesor carga los suyos y elige quién los ve
  *        ("Dirección" o "Todos"); ve los propios y los que otro profesor
@@ -27,10 +27,21 @@
 
   const user = getUsuarioActual();
   const verLegajo = puedeVerLegajo();
+  const verDni = puedeVerDni();
   const puedeAgregar = puedeAgregarSeguimiento();
 
   const params = new URLSearchParams(window.location.search);
   const cursoId = params.get('id');
+  const fichaInicialId = params.get('alumno');
+  if (fichaInicialId) {
+    const fichaParams = new URLSearchParams({
+      id: fichaInicialId,
+      volver: 'curso'
+    });
+    if (cursoId) fichaParams.set('curso_id', cursoId);
+    window.location.replace(`ficha-alumno.html?${fichaParams.toString()}`);
+    return;
+  }
 
   const AYUDA_VISIBILIDAD = {
     admin: 'Solo lo ven dirección y vos.',
@@ -41,6 +52,10 @@
 
   let curso = null;
   let seguimientos = [];   // lo que el servidor devolvió para este usuario
+  let comentariosClase = [];
+  let asistenciaDelDia = [];
+  let cargaAsistencia = 0;
+  let anioLectivoActivo = null;
   let cargaActual = 0;     // número de la última carga pedida (si llegan desordenadas, vale la última)
   let avisoTimer = null;
 
@@ -59,6 +74,8 @@
       renderHeader();
       configurarTablaAlumnos();
       filtrarAlumnos(document.getElementById('search-input').value);
+      await configurarAsistencia();
+      configurarComentariosClase();
       configurarSeguimientos();
       await refrescarSeguimientos();
     } catch (err) {
@@ -116,13 +133,19 @@
 
   function configurarTablaAlumnos() {
     const thead = document.getElementById('thead-row');
-    thead.innerHTML = verLegajo
-      ? `<th>#</th><th>Legajo</th><th>Nombre y Apellido</th><th>Edad</th><th>DNI</th>`
-      : `<th>#</th><th>Nombre y Apellido</th><th>Edad</th>`;
+    thead.innerHTML = [
+      '<th>#</th>',
+      verLegajo ? '<th>Legajo</th>' : '',
+      '<th>Nombre y Apellido</th><th>Edad</th>',
+      verDni ? '<th>DNI</th>' : '',
+      '<th>Ficha</th>'
+    ].join('');
     const buscador = document.getElementById('search-input');
     buscador.placeholder = verLegajo
       ? 'Buscar por nombre, apellido, legajo o DNI...'
-      : 'Buscar por nombre o apellido...';
+      : verDni
+        ? 'Buscar por nombre, apellido o DNI...'
+        : 'Buscar por nombre o apellido...';
     buscador.addEventListener('input', e => filtrarAlumnos(e.target.value));
   }
 
@@ -137,19 +160,14 @@
           <span>${escapeHtml(a.apellido)}, ${escapeHtml(a.nombre)}</span>
         </div>
       </td>`;
-    if (verLegajo) {
-      return `<tr>
-        <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
-        <td><span class="legajo-badge">${escapeHtml(a.legajo)}</span></td>
-        ${nombre}
-        <td style="font-size:13px;">${edad} años</td>
-        <td style="font-family:'Courier New',monospace;font-size:13px;">${escapeHtml(a.dni)}</td>
-      </tr>`;
-    }
+    const ficha = `<td><button class="btn-ficha" data-ficha-alumno="${escapeHtml(a.id)}">Ver ficha</button></td>`;
     return `<tr>
       <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
+      ${verLegajo ? `<td><span class="legajo-badge">${escapeHtml(a.legajo)}</span></td>` : ''}
       ${nombre}
       <td style="font-size:13px;">${edad} años</td>
+      ${verDni ? `<td style="font-family:'Courier New',monospace;font-size:13px;">${escapeHtml(a.dni)}</td>` : ''}
+      ${ficha}
     </tr>`;
   }
 
@@ -160,16 +178,283 @@
 
   function renderAlumnos(lista) {
     const tbody = document.getElementById('alumnos-tbody');
-    const colspan = verLegajo ? 5 : 3;
+    const colspan = 4 + Number(verLegajo) + Number(verDni);
     tbody.innerHTML = lista.length === 0
       ? `<tr><td colspan="${colspan}" class="no-results">No se encontraron alumnos.</td></tr>`
       : lista.map((a, i) => crearFila(a, i)).join('');
+    tbody.querySelectorAll('[data-ficha-alumno]').forEach(button => {
+      button.addEventListener('click', () => abrirFichaAlumno(button.dataset.fichaAlumno));
+    });
     actualizarContador(lista.length);
   }
 
-  // Legajo y DNI solo se pueden buscar si el usuario puede verlos.
+  // La búsqueda respeta los permisos independientes de legajo y DNI.
   function filtrarAlumnos(q) {
-    renderAlumnos(buscarAlumnos(curso.alumnos, q, { identificadores: verLegajo }));
+    renderAlumnos(buscarAlumnos(curso.alumnos, q, { legajo: verLegajo, dni: verDni }));
+  }
+
+  /* ─────────────── ASISTENCIA ─────────────── */
+  function fechaLocal() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
+  async function configurarAsistencia() {
+    const inputFecha = document.getElementById('asistencia-fecha');
+    inputFecha.value = fechaLocal();
+    inputFecha.addEventListener('change', () => cargarAsistencia(inputFecha.value));
+    if (!puedeEditarAsistencia()) {
+      document.getElementById('asistencia-section').style.display = 'none';
+      return;
+    }
+    if (!curso.colegio_id) {
+      document.getElementById('asistencia-ciclo-hint').textContent =
+        'La clase todavía no está asociada a un colegio.';
+      return;
+    }
+    try {
+      const ciclo = await getCicloLectivoActivoDB(curso.colegio_id);
+      if (!ciclo) {
+        document.getElementById('asistencia-ciclo-hint').textContent =
+          'No hay un año lectivo activo. Dirección debe abrirlo desde Panel Admin → Preceptores.';
+        document.getElementById('asistencia-tbody').innerHTML =
+          `<tr><td colspan="5" class="no-results">No se puede cargar asistencia hasta que se abra un año lectivo.</td></tr>`;
+        return;
+      }
+      anioLectivoActivo = ciclo.anio_lectivo;
+      document.getElementById('asistencia-anio').textContent = `· ${anioLectivoActivo}`;
+      document.getElementById('asistencia-ciclo-hint').textContent =
+        'Presente: 0 faltas · Tarde: 0,25 · Ausente: 1 (también si está justificada)';
+      await cargarAsistencia(inputFecha.value);
+    } catch (error) {
+      document.getElementById('asistencia-ciclo-hint').textContent =
+        `No se pudo cargar el año lectivo: ${error.message}`;
+    }
+  }
+
+  async function cargarAsistencia(fecha) {
+    const tbody = document.getElementById('asistencia-tbody');
+    if (!anioLectivoActivo) return;
+    const carga = ++cargaAsistencia;
+    tbody.innerHTML = `<tr><td colspan="5" class="no-results">Cargando asistencia...</td></tr>`;
+    try {
+      const datos = await getAsistenciasDelCursoDB(
+        curso.id, fecha, anioLectivoActivo, curso.alumnos.map(alumno => alumno.id));
+      if (carga !== cargaAsistencia) return;
+      asistenciaDelDia = datos.delDia;
+      await pintarAsistencia(datos, carga);
+    } catch (error) {
+      if (carga !== cargaAsistencia) return;
+      tbody.innerHTML = `<tr><td colspan="5" class="no-results">No se pudo cargar la asistencia: ${escapeHtml(error.message)}</td></tr>`;
+    }
+  }
+
+  async function pintarAsistencia(datos, carga) {
+    const tbody = document.getElementById('asistencia-tbody');
+    const registros = new Map(datos.delDia.map(registro => [registro.alumno_id, registro]));
+    if (!curso.alumnos.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-results">No hay alumnos en esta clase.</td></tr>`;
+      return;
+    }
+    const filas = await Promise.all(curso.alumnos.map(async alumno => {
+      const registro = registros.get(alumno.id);
+      const estado = registro?.estado || '';
+      const justificada = Boolean(registro?.justificada);
+      const total = Number(datos.totales[alumno.id] || 0);
+      const archivos = await Promise.all((registro?.adjuntos || []).map(async (path, index) => {
+        try {
+          const url = await getUrlImagenJustificacion(path);
+          return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Imagen ${index + 1}</a>`;
+        } catch (error) {
+          console.error('No se pudo generar el enlace de una justificación:', error.message);
+          return `<span class="ficha-muted">Imagen ${index + 1} no disponible</span>`;
+        }
+      }));
+      return `<tr data-asistencia-alumno="${escapeHtml(alumno.id)}">
+        <td><strong>${escapeHtml(alumno.apellido)}, ${escapeHtml(alumno.nombre)}</strong></td>
+        <td><div class="asistencia-controls">
+          <select class="asistencia-estado" aria-label="Estado de ${escapeHtml(alumno.nombre)} ${escapeHtml(alumno.apellido)}">
+            <option value="">Sin registrar</option>
+            <option value="presente" ${estado === 'presente' ? 'selected' : ''}>Presente</option>
+            <option value="tarde" ${estado === 'tarde' ? 'selected' : ''}>Tarde</option>
+            <option value="ausente" ${estado === 'ausente' ? 'selected' : ''}>Ausente</option>
+          </select>
+        </div></td>
+        <td>${String(total).replace(/\.00$/, '')}</td>
+        <td class="asistencia-justificacion">
+          <label><input class="asistencia-justificada" type="checkbox" ${justificada ? 'checked' : ''}>
+            Justificar ausencia</label>
+          <div class="asistencia-justificacion-detalle" style="display:${justificada ? 'block' : 'none'}">
+            <textarea class="asistencia-motivo" maxlength="1000" placeholder="Explicación">${escapeHtml(registro?.motivo || '')}</textarea>
+            <input class="asistencia-imagenes" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+            <small>Hasta 5 imágenes JPG, PNG o WebP; 10 MB por imagen.</small>
+            <div class="asistencia-archivos">${archivos.join(' ')}</div>
+          </div>
+        </td>
+        <td><button type="button" class="btn-seg asistencia-guardar">Guardar</button></td>
+      </tr>`;
+    }));
+    if (carga !== cargaAsistencia) return;
+    tbody.innerHTML = filas.join('');
+    tbody.querySelectorAll('tr[data-asistencia-alumno]').forEach(row => {
+      const estado = row.querySelector('.asistencia-estado');
+      const justificada = row.querySelector('.asistencia-justificada');
+      const detalle = row.querySelector('.asistencia-justificacion-detalle');
+      const syncJustificacion = () => {
+        const habilitada = estado.value === 'ausente';
+        justificada.disabled = !habilitada;
+        if (!habilitada) justificada.checked = false;
+        const mostrarDetalle = habilitada && justificada.checked;
+        detalle.style.display = mostrarDetalle ? 'block' : 'none';
+        if (!mostrarDetalle) {
+          row.querySelector('.asistencia-motivo').value = '';
+          row.querySelector('.asistencia-imagenes').value = '';
+        }
+      };
+      estado.addEventListener('change', syncJustificacion);
+      justificada.addEventListener('change', syncJustificacion);
+      syncJustificacion();
+      row.querySelector('.asistencia-guardar').addEventListener('click', () => guardarAsistenciaFila(row));
+    });
+  }
+
+  async function guardarAsistenciaFila(row) {
+    const alumnoId = row.dataset.asistenciaAlumno;
+    const alumno = curso.alumnos.find(item => item.id === alumnoId);
+    const previo = asistenciaDelDia.find(registro => registro.alumno_id === alumnoId);
+    const estado = row.querySelector('.asistencia-estado').value;
+    const justificada = row.querySelector('.asistencia-justificada').checked;
+    const motivo = row.querySelector('.asistencia-motivo')?.value.trim() || '';
+    const inputFiles = row.querySelector('.asistencia-imagenes');
+    const files = Array.from(inputFiles?.files || []);
+    const button = row.querySelector('.asistencia-guardar');
+    const anteriores = justificada ? (previo?.adjuntos || []) : [];
+    if (!estado) { mostrarAviso(`Seleccioná el estado de ${alumno.nombre}.`, 'error'); return; }
+    if (justificada && estado !== 'ausente') { mostrarAviso('Solo se puede justificar una ausencia.', 'error'); return; }
+    if (justificada && !motivo) { mostrarAviso('Escribí la explicación de la justificación.', 'error'); return; }
+    if (files.length + anteriores.length > 5) { mostrarAviso('Se permiten hasta 5 imágenes por justificación.', 'error'); return; }
+    if (files.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024)) {
+      mostrarAviso('Cada imagen debe ser JPG, PNG o WebP y pesar como máximo 10 MB.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Guardando...';
+    const payload = {
+      id: previo?.id || null,
+      alumnoId,
+      cursoId: curso.id,
+      fecha: document.getElementById('asistencia-fecha').value,
+      anioLectivo: anioLectivoActivo,
+      estado,
+      justificada,
+      motivo: justificada ? motivo : null,
+      adjuntos: anteriores
+    };
+    const guardado = await guardarAsistenciaDB(payload);
+    if (!guardado.ok) {
+      button.disabled = false;
+      button.textContent = 'Guardar';
+      mostrarAviso(guardado.error, 'error');
+      return;
+    }
+    const asistenciaId = payload.id || guardado.data;
+    const subidas = [];
+    for (const file of files) {
+      const resultado = await subirImagenJustificacion(asistenciaId, file);
+      if (!resultado.ok) {
+        const cleanup = await eliminarImagenesJustificacion(subidas);
+        button.disabled = false;
+        button.textContent = 'Guardar';
+        mostrarAviso(`La asistencia se guardó, pero no se pudo adjuntar una imagen: ${resultado.error}${cleanup.ok ? '' : ` ${cleanup.error}`}`, 'error');
+        await cargarAsistencia(payload.fecha);
+        return;
+      }
+      subidas.push(resultado.path);
+    }
+    if (subidas.length) {
+      const resultado = await guardarAsistenciaDB({ ...payload, id: asistenciaId, adjuntos: [...anteriores, ...subidas] });
+      if (!resultado.ok) {
+        const cleanup = await eliminarImagenesJustificacion(subidas);
+        button.disabled = false;
+        button.textContent = 'Guardar';
+        mostrarAviso(`La asistencia se guardó, pero no se pudieron vincular las imágenes: ${resultado.error}${cleanup.ok ? '' : ` ${cleanup.error}`}`, 'error');
+        await cargarAsistencia(payload.fecha);
+        return;
+      }
+    }
+    if (!justificada && previo?.adjuntos?.length) {
+      const cleanup = await eliminarImagenesJustificacion(previo.adjuntos);
+      if (!cleanup.ok) mostrarAviso(`Asistencia guardada. No se pudieron limpiar imágenes anteriores: ${cleanup.error}`, 'error');
+    }
+    mostrarAviso(`Asistencia guardada para ${alumno.nombre} ${alumno.apellido}.`, 'ok');
+    await cargarAsistencia(payload.fecha);
+  }
+
+  /* ─────────────── COMENTARIOS DE CLASE Y FICHA ─────────────── */
+  function configurarComentariosClase() {
+    const formulario = document.getElementById('comentario-clase-form');
+    const boton = document.getElementById('btn-agregar-comentario-clase');
+    if (!puedeComentar()) {
+      formulario.style.display = 'none';
+    } else {
+      boton.addEventListener('click', agregarComentarioClase);
+    }
+    refrescarComentariosClase();
+  }
+
+  async function refrescarComentariosClase() {
+    const lista = document.getElementById('comentarios-clase-lista');
+    lista.innerHTML = '<div class="seg-empty">Cargando comentarios...</div>';
+    try {
+      comentariosClase = await getComentariosDeClaseDB(curso.id);
+      pintarComentariosClase();
+    } catch (error) {
+      lista.innerHTML = `<div class="seg-empty">No se pudieron cargar los comentarios: ${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  function pintarComentariosClase() {
+    const lista = document.getElementById('comentarios-clase-lista');
+    lista.innerHTML = comentariosClase.length ? comentariosClase.map(comentario => `
+      <article class="comentario-clase-item">
+        <header><span><strong>${escapeHtml(comentario.autor_nombre)} ${escapeHtml(comentario.autor_apellido)}</strong>
+          · ${escapeHtml(new Date(comentario.creado_en).toLocaleString('es-AR'))}
+          · ${comentario.visible_para === 'profesor' ? 'Todos' : 'Dirección'}</span>
+          ${(esAdmin() || comentario.autor_id === user.id) ? `<button type="button" data-eliminar-comentario="${escapeHtml(comentario.id)}">Eliminar</button>` : ''}
+        </header>
+        <p>${escapeHtml(comentario.texto)}</p>
+      </article>`).join('') : '<p class="ficha-muted">Todavía no hay comentarios para esta clase.</p>';
+    lista.querySelectorAll('[data-eliminar-comentario]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const result = await eliminarComentarioDB(button.dataset.eliminarComentario);
+        if (!result.ok) { mostrarAviso(result.error, 'error'); return; }
+        await refrescarComentariosClase();
+      });
+    });
+  }
+
+  async function agregarComentarioClase() {
+    const texto = document.getElementById('comentario-clase-texto');
+    const boton = document.getElementById('btn-agregar-comentario-clase');
+    const contenido = texto.value.trim();
+    if (!contenido) { mostrarAviso('Escribí un comentario antes de guardarlo.', 'error'); return; }
+    boton.disabled = true;
+    const result = await agregarComentarioClaseDB(
+      curso.id, contenido, document.getElementById('comentario-clase-visibilidad').value);
+    boton.disabled = false;
+    if (!result.ok) { mostrarAviso(result.error, 'error'); return; }
+    texto.value = '';
+    await refrescarComentariosClase();
+  }
+
+  function abrirFichaAlumno(alumnoId) {
+    const fichaParams = new URLSearchParams({
+      id: alumnoId,
+      volver: 'curso',
+      curso_id: curso.id
+    });
+    window.location.href = `ficha-alumno.html?${fichaParams.toString()}`;
   }
 
   /* ─────────────── SEGUIMIENTOS ─────────────── */
@@ -198,7 +483,7 @@
     const sel = document.getElementById('seg-alumno');
     curso.alumnos.forEach(a => {
       const opt = document.createElement('option');
-      opt.value = a.legajo;
+      opt.value = a.id;
       opt.textContent = `${a.apellido}, ${a.nombre}`;
       sel.appendChild(opt);
     });
@@ -412,7 +697,7 @@
       .map(id => document.getElementById(id));
     const [selAlumno, selCategoria, inpTexto, inpValor] = campos;
 
-    const legajo = selAlumno.value;
+    const alumnoId = selAlumno.value;
     const categoria = selCategoria.value;
     const texto = inpTexto.value.trim();
     const valor = inpValor.value;
@@ -421,13 +706,13 @@
     campos.forEach(c => c.classList.remove('seg-campo-error'));
     ocultarAviso();
 
-    if (!legajo)    { selAlumno.classList.add('seg-campo-error'); return; }
+    if (!alumnoId)  { selAlumno.classList.add('seg-campo-error'); return; }
     if (!categoria) { selCategoria.classList.add('seg-campo-error'); return; }
     if (categoria === 'nota' && !valor) { inpValor.classList.add('seg-campo-error'); return; }
     if (!texto)     { inpTexto.classList.add('seg-campo-error'); return; }
 
     btn.disabled = true;
-    const r = await agregarSeguimientoDB(cursoId, legajo, { categoria, texto, valor, visiblePara });
+    const r = await agregarSeguimientoDB(cursoId, alumnoId, { categoria, texto, valor, visiblePara });
     btn.disabled = false;
     if (!r.ok) { mostrarAviso(r.error, 'error'); return; }
 

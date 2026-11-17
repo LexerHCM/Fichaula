@@ -3,7 +3,7 @@
  * ───────────────────────────────────────────────────────────
  * El nav se adapta al rol:
  *   - admin / superadmin → link "PANEL ADMIN" + "CLASES"
- *   - profesor           → "ALUMNOS" + "CLASES"
+ *   - profesor / preceptor → "ALUMNOS" + "CLASES"
  * Depende de: auth.js (getUsuarioActual, cerrarSesion)
  */
 
@@ -53,6 +53,7 @@ function renderNav(activeLink = '', enPages = true) {
   if (user) {
     if (user.rol === 'superadmin') rolTexto = 'Superadministrador';
     else if (user.rol === 'admin') rolTexto = user.cargo || 'Administrador';
+    else if (user.rol === 'preceptor') rolTexto = 'Preceptor/a';
     else rolTexto = user.materia || 'Docente';
   }
 

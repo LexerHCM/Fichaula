@@ -19,7 +19,7 @@
       <div class="admin-header">
         <div class="badge">PANEL DE ADMINISTRACIÓN</div>
         <h1>Control <span>total</span></h1>
-        <p>Gestioná clases, alumnos, profesores y revisá los seguimientos cargados por los docentes.</p>
+        <p>Gestioná clases, alumnos, profesores, preceptores y revisá los registros del colegio.</p>
       </div>
 
       <!-- Tabs -->
@@ -27,6 +27,7 @@
         <button class="admin-tab active" data-tab="clases">Clases</button>
         <button class="admin-tab" data-tab="alumnos">Alumnos</button>
         <button class="admin-tab" data-tab="profesores">Profesores</button>
+        <button class="admin-tab" data-tab="preceptores">Preceptores</button>
         <button class="admin-tab" data-tab="seguimientos">Seguimientos</button>
         <button class="admin-tab" data-tab="papelera">
           Papelera <span class="tab-contador oculto" id="contador-papelera">0</span>
@@ -55,7 +56,7 @@
                 <th>Nivel</th>
                 <th>Turno</th>
                 <th>Aula</th>
-                <th>Profesor titular</th>
+                <th>Preceptor/a</th>
                 <th>Alumnos</th>
                 <th class="acciones-col">Acciones</th>
               </tr>
@@ -65,12 +66,58 @@
         </div>
       </div>
 
+      <!-- ═══ TAB: PRECEPTORES ═══ -->
+      <div class="admin-tab-panel" id="panel-preceptores">
+        <section class="admin-ciclo-card">
+          <div>
+            <h2>Ciclo <span>lectivo</span></h2>
+            <p id="ciclo-lectivo-actual">Cargando ciclo lectivo...</p>
+            <p id="ciclo-lectivo-historial" class="ficha-muted"></p>
+          </div>
+          <div class="admin-ciclo-controls">
+            <label id="colegio-ciclo-wrap" class="modal-form-group oculto">
+              <span>Colegio</span>
+              <select id="colegio-ciclo"></select>
+            </label>
+            <label class="modal-form-group">
+              <span>Abrir año lectivo</span>
+              <input type="number" id="anio-lectivo" min="2000" max="2200" inputmode="numeric">
+            </label>
+            <button class="btn-admin-action" type="button" id="btn-abrir-anio">Abrir año</button>
+          </div>
+        </section>
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <input type="text" class="admin-search" id="search-preceptores"
+                   placeholder="Buscar preceptor por nombre, DNI o email...">
+          </div>
+          <button class="btn-admin-action" id="btn-nuevo-preceptor" type="button" hidden>
+            Nueva cuenta de preceptor/a
+          </button>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Preceptor/a</th>
+                <th>DNI</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Clases asignadas</th>
+                <th class="acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-preceptores"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ═══ TAB: ALUMNOS ═══ -->
       <div class="admin-tab-panel" id="panel-alumnos">
         <div class="admin-toolbar">
           <div class="admin-toolbar-left">
             <input type="text" class="admin-search" id="search-alumnos" maxlength="80"
-                   placeholder="Buscar por nombre, legajo, DNI o curso...">
+                   placeholder="Buscar por nombre, DNI o curso...">
           </div>
           <button class="btn-admin-action" id="btn-nuevo-alumno">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -82,8 +129,7 @@
         <div class="admin-table-wrapper">
           <table class="admin-table">
             <thead>
-              <tr>
-                <th>Legajo</th>
+              <tr id="thead-alumnos">
                 <th>Nombre y Apellido</th>
                 <th>DNI</th>
                 <th>Edad</th>
@@ -103,6 +149,9 @@
             <input type="text" class="admin-search" id="search-profesores"
                    placeholder="Buscar profesor por nombre, materia o email...">
           </div>
+          <button class="btn-admin-action" id="btn-nuevo-profesor" type="button" hidden>
+            Nueva cuenta de profesor
+          </button>
         </div>
         <div class="admin-table-wrapper">
           <table class="admin-table">

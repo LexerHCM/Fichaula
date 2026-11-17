@@ -57,7 +57,8 @@ Navegador (HTML/CSS/JS)  ──fetch REST──►  Supabase
   • sin framework                          • PostgreSQL + Row Level Security
   • sin SDK (fetch nativo)                 • Supabase Auth (JWT, bcrypt)
   • capa de red resiliente                 • funciones RPC SECURITY DEFINER
-    (timeout + refresh de token)           • pg_cron (purga de papelera)
+    (timeout + refresh de token)           • Edge Functions: gestión segura de cuentas
+                                           • pg_cron (purga de papelera)
 ```
 
 La **anon key** de Supabase es pública por diseño: la seguridad real la garantiza

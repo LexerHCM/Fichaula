@@ -73,7 +73,9 @@
       iniciarSesion(user);
       setTimeout(() => redirigirPorRol(user.rol), 400);
     } catch (e) {
-      mostrarError('No se pudo conectar. Revisá tu conexión e intentá de nuevo.');
+      mostrarError(e.code === 'COLEGIO_DESACTIVADO'
+        ? e.message
+        : 'No se pudo conectar. Revisá tu conexión e intentá de nuevo.');
     } finally {
       if (enviando) {
         enviando = false;

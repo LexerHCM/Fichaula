@@ -138,6 +138,76 @@ const sb = {
   delete(path)     { return sb._req('DELETE', path); },
   /** Llama a una función de Postgres (RPC). Corre en una transacción. */
   rpc(fn, args)    { return sb._req('POST', `rpc/${fn}`, args || {}); },
+  async invoke(fn, args) {
+    const url = `${SUPABASE_URL}/functions/v1/${encodeURIComponent(fn)}`;
+    const request = () => _fetch(url, {
+      method: 'POST',
+      headers: _headers(),
+      body: JSON.stringify(args || {})
+    });
+    let res = await request();
+    let functionError = false;
+    if (res.status === 401) {
+      try {
+        const payload = await res.clone().json();
+        functionError = payload && typeof payload.error === 'string';
+      } catch (_) {}
+      if (!functionError && await _intentarRefresh()) res = await request();
+    }
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const err = new Error(data && (data.error || data.message) || `Error del servidor (${res.status}).`);
+      err.status = res.status;
+      err.functionError = data && typeof data.error === 'string';
+      throw err;
+    }
+    return data;
+  },
+  async storageUpload(bucket, path, file) {
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodedPath}`;
+    const request = () => _fetch(url, {
+      method: 'POST',
+      headers: _headers({ 'Content-Type': file.type, 'x-upsert': 'false' }),
+      body: file
+    });
+    let res = await request();
+    if (res.status === 401 && await _intentarRefresh()) res = await request();
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (_) {}
+      const error = new Error(detail || `No se pudo subir la imagen (${res.status}).`);
+      error.status = res.status;
+      throw error;
+    }
+    return res.json();
+  },
+  async storageSignedUrl(bucket, path) {
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${encodedPath}`;
+    const request = () => _fetch(url, {
+      method: 'POST', headers: _headers(), body: JSON.stringify({ expiresIn: 3600 })
+    });
+    let res = await request();
+    if (res.status === 401 && await _intentarRefresh()) res = await request();
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok || !data?.signedURL) {
+      throw new Error(data?.message || `No se pudo abrir la imagen (${res.status}).`);
+    }
+    return data.signedURL.startsWith('http')
+      ? data.signedURL
+      : `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+  },
+  async storageRemove(bucket, paths) {
+    const res = await _fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}`, {
+      method: 'DELETE', headers: _headers(), body: JSON.stringify({ prefixes: paths })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error(data?.message || `No se pudieron eliminar las imágenes (${res.status}).`);
+  },
   /**
    * GET que trae TODAS las filas, pidiéndolas de a tandas: la API corta
    * cada respuesta en SB_FILAS_POR_PEDIDO. El `path` tiene que llevar un
@@ -277,7 +347,12 @@ async function validarCredencialesDB(email, password) {
       body: JSON.stringify({ email: ve.value, password })
     });
 
-    if (!res.ok) return null; // credenciales inválidas
+    if (!res.ok) {
+      if (res.status === 400 || res.status === 401) return null;
+      const error = new Error('No se pudo verificar la cuenta.');
+      error.status = res.status;
+      throw error;
+    }
 
     const data = await res.json();
     // Guardar tokens ANTES de pedir el perfil (las consultas usan el token)
@@ -291,10 +366,29 @@ async function validarCredencialesDB(email, password) {
       sessionStorage.removeItem(SB_REFRESH_KEY);
       return null;
     }
+
+    if (perfil.rol !== 'superadmin' && perfil.colegio_id) {
+      const colegios = await sb.get(
+        `colegios?id=eq.${encodeURIComponent(perfil.colegio_id)}&select=nombre,activo`
+      );
+      if (!colegios.length) {
+        throw new Error('No se pudo verificar el estado del colegio asociado a tu cuenta.');
+      }
+      if (!colegios[0].activo) {
+        const error = new Error(`El colegio "${colegios[0].nombre}" está desactivado. No podés iniciar sesión temporalmente.`);
+        error.code = 'COLEGIO_DESACTIVADO';
+        throw error;
+      }
+    }
+
     return perfil;
   } catch (err) {
-    console.error('Error de autenticación:', err.message); // sin datos sensibles
-    return null;
+    sessionStorage.removeItem(SB_ACCESS_KEY);
+    sessionStorage.removeItem(SB_REFRESH_KEY);
+    if (err.code !== 'COLEGIO_DESACTIVADO') {
+      console.error('Error de autenticación:', err.message); // sin datos sensibles
+    }
+    throw err;
   }
 }
 
@@ -315,6 +409,9 @@ async function _resolverPerfil(uid) {
 
   rows = await sb.get(`profesores?id=eq.${u}&select=*`);
   if (rows.length) return { ...rows[0], rol: 'profesor' };
+
+  rows = await sb.get(`preceptores?id=eq.${u}&select=*`);
+  if (rows.length) return { ...rows[0], rol: 'preceptor' };
 
   return null;
 }
@@ -418,7 +515,7 @@ async function getSeguimientosDeClaseDB(cursoId) {
  *   visiblePara: 'admin' (Dirección, por defecto) | 'profesor' (Todos)
  * @returns {Promise<{ok, data?, error?}>}
  */
-async function agregarSeguimientoDB(cursoId, legajo, datos) {
+async function agregarSeguimientoDB(cursoId, alumnoId, datos) {
   const user = getUsuarioActual();
   if (!user) return { ok: false, error: 'Necesitás iniciar sesión.' };
 
@@ -442,12 +539,13 @@ async function agregarSeguimientoDB(cursoId, legajo, datos) {
 
   try {
     const alumnos = await sb.get(
-      `vista_alumnos_completa?legajo=eq.${encodeURIComponent(legajo)}&curso_id=eq.${encodeURIComponent(cursoId)}&select=id`);
+      `vista_alumnos_completa?id=eq.${encodeURIComponent(alumnoId)}&curso_id=eq.${encodeURIComponent(cursoId)}&select=id`);
     if (!alumnos.length) return { ok: false, error: 'Alumno no encontrado.' };
 
     const nuevo = await sb.post('seguimientos', {
       alumno_id: alumnos[0].id,
-      profesor_id: user.id,
+      profesor_id: user.rol === 'profesor' ? user.id : null,
+      preceptor_id: user.rol === 'preceptor' ? user.id : null,
       categoria,
       texto: vt.value,
       valor: valorFinal,
@@ -521,7 +619,7 @@ async function purgarSeguimientoDB(papeleraId) {
 /** Comentarios de un alumno (los borrados ya no están en la tabla). */
 async function getComentariosDeAlumnoDB(alumnoId) {
   return sb.get(
-    `comentarios?alumno_id=eq.${encodeURIComponent(alumnoId)}&select=*&order=creado_en.desc`);
+    `vista_comentarios_completa?alumno_id=eq.${encodeURIComponent(alumnoId)}&select=*&order=creado_en.desc`);
 }
 
 async function agregarComentarioDB(alumnoId, texto, visiblePara = 'profesor') {
@@ -532,7 +630,32 @@ async function agregarComentarioDB(alumnoId, texto, visiblePara = 'profesor') {
   try {
     const nuevo = await sb.post('comentarios', {
       alumno_id: alumnoId,
-      profesor_id: user.id,
+      profesor_id: user.rol === 'profesor' ? user.id : null,
+      preceptor_id: user.rol === 'preceptor' ? user.id : null,
+      texto: vt.value,
+      visible_para: visiblePara
+    });
+    return { ok: true, data: Array.isArray(nuevo) ? nuevo[0] : nuevo };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getComentariosDeClaseDB(cursoId) {
+  return sb.get(
+    `vista_comentarios_completa?clase_id=eq.${encodeURIComponent(cursoId)}&select=*&order=creado_en.desc`);
+}
+
+async function agregarComentarioClaseDB(cursoId, texto, visiblePara = 'admin') {
+  const user = getUsuarioActual();
+  if (!user || !puedeComentar()) return { ok: false, error: 'Solo docentes y preceptores pueden comentar.' };
+  const vt = validar.textoNoVacio(texto);
+  if (!vt.ok) return vt;
+  try {
+    const nuevo = await sb.post('comentarios', {
+      curso_id: cursoId,
+      profesor_id: user.rol === 'profesor' ? user.id : null,
+      preceptor_id: user.rol === 'preceptor' ? user.id : null,
       texto: vt.value,
       visible_para: visiblePara
     });
@@ -574,26 +697,26 @@ async function eliminarComentarioDB(comentarioId) {
 // ║  (RLS exige rol admin/superadmin para escribir)          ║
 // ╚══════════════════════════════════════════════════════════╝
 
-/** Clases con nombre del titular y cantidad de alumnos. */
+/** Clases con nombre de preceptor y cantidad de alumnos. */
 async function getClasesAdminDB() {
-  const [clases, profes, alumnos] = await Promise.all([
+  const [clases, preceptores, alumnos] = await Promise.all([
     sb.get('clases?select=*&order=anio.asc,division.asc'),
-    sb.get('profesores?select=id,nombre,apellido'),
+    sb.get('preceptores?select=id,nombre,apellido'),
     sb.get('vista_alumnos_completa?select=curso_id')
   ]);
-  const profeMap = Object.fromEntries(profes.map(p => [p.id, `${p.nombre} ${p.apellido}`]));
+  const preceptorMap = Object.fromEntries(preceptores.map(p => [p.id, `${p.nombre} ${p.apellido}`]));
   const conteo = {};
   alumnos.forEach(a => { conteo[a.curso_id] = (conteo[a.curso_id] || 0) + 1; });
   return clases.map(c => ({
     ..._normalizarClase(c),
-    titularNombre: c.profesor_titular_id ? (profeMap[c.profesor_titular_id] || null) : null,
+    preceptorNombre: c.preceptor_id ? (preceptorMap[c.preceptor_id] || null) : null,
     cantAlumnos: conteo[c.id] || 0
   }));
 }
 
 /**
  * Crea una clase. Requiere anio + division (UNIQUE) según el esquema.
- * @param {object} d {anio, division, nivel, turno, aula, profesorTitularId?}
+ * @param {object} d {anio, division, nivel, turno, aula, preceptorId?}
  */
 async function crearClaseDB(d) {
   const va = validar.anio(d.anio);       if (!va.ok) return va;
@@ -606,7 +729,7 @@ async function crearClaseDB(d) {
     const nueva = await sb.post('clases', {
       id, anio: va.value, division: vd.value,
       nivel: d.nivel.trim(), turno: d.turno, aula: d.aula.trim(),
-      profesor_titular_id: d.profesorTitularId || null
+      preceptor_id: d.preceptorId || null
     });
     return { ok: true, data: Array.isArray(nueva) ? nueva[0] : nueva };
   } catch (e) {
@@ -617,13 +740,40 @@ async function crearClaseDB(d) {
   }
 }
 
+async function crearClaseColegioSuperadminDB(colegioId, d) {
+  const va = validar.anio(d.anio); if (!va.ok) return va;
+  const vd = validar.division(d.division); if (!vd.ok) return vd;
+  if (!d.nivel || !d.turno || !d.aula) {
+    return { ok: false, error: 'Faltan datos: nivel, turno o aula.' };
+  }
+  try {
+    const data = await sb.post('clases', {
+      id: `${va.value}${vd.value}`,
+      anio: va.value,
+      division: vd.value,
+      nivel: d.nivel.trim(),
+      turno: d.turno,
+      aula: d.aula.trim(),
+      preceptor_id: d.preceptorId || null,
+      colegio_id: colegioId
+    });
+    return { ok: true, data: Array.isArray(data) ? data[0] : data };
+  } catch (e) {
+    const message = _msg(e);
+    if (/duplicate|unique/i.test(message)) {
+      return { ok: false, error: `Ya existe la clase ${va.value}° ${vd.value} en este colegio.` };
+    }
+    return { ok: false, error: message };
+  }
+}
+
 async function modificarClaseDB(id, cambios) {
   const patch = {};
   if (cambios.nivel !== undefined) patch.nivel = cambios.nivel.trim();
   if (cambios.turno !== undefined) patch.turno = cambios.turno;
   if (cambios.aula  !== undefined) patch.aula = cambios.aula.trim();
-  if (cambios.profesorTitularId !== undefined)
-    patch.profesor_titular_id = cambios.profesorTitularId || null;
+  if (cambios.preceptorId !== undefined)
+    patch.preceptor_id = cambios.preceptorId || null;
   try {
     const upd = await sb.patch(`clases?id=eq.${encodeURIComponent(id)}`, patch);
     return { ok: true, data: upd };
@@ -707,6 +857,179 @@ async function getProfesoresDB() {
   return sb.get('profesores?activo=eq.true&select=*&order=apellido.asc');
 }
 
+async function crearCuentaProfesorDB(datos) {
+  try {
+    const data = await sb.invoke('crear-profesor', datos);
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getPreceptoresDB(colegioId) {
+  const filtro = colegioId ? `&colegio_id=eq.${encodeURIComponent(colegioId)}` : '';
+  return sb.get(`preceptores?activo=eq.true${filtro}&select=*&order=apellido.asc`);
+}
+
+async function crearCuentaPreceptorDB(datos) {
+  try {
+    const data = await sb.invoke('crear-preceptor', datos);
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function modificarCuentaPreceptorDB(preceptorId, datos) {
+  try {
+    const data = await sb.invoke('editar-preceptor', {
+      preceptor_id: preceptorId,
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      dni: datos.dni,
+      fecha_nacimiento: datos.fecha_nacimiento,
+      telefono: datos.telefono,
+      email: datos.email
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function eliminarCuentaPreceptorDB(preceptorId, password) {
+  try {
+    const data = await sb.invoke('eliminar-preceptor', {
+      preceptor_id: preceptorId,
+      password
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function eliminarCuentaProfesorDB(profesorId, password) {
+  try {
+    const data = await sb.invoke('eliminar-profesor', {
+      profesor_id: profesorId,
+      password
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getCicloLectivoActivoDB(colegioId) {
+  const rows = await sb.get(
+    `ciclos_lectivos?colegio_id=eq.${encodeURIComponent(colegioId)}&activo=eq.true&select=colegio_id,anio_lectivo`);
+  return rows[0] || null;
+}
+
+async function getCiclosLectivosDB(colegioId) {
+  return sb.get(
+    `ciclos_lectivos?colegio_id=eq.${encodeURIComponent(colegioId)}&select=anio_lectivo,activo,creado_en&order=anio_lectivo.desc`);
+}
+
+async function abrirAnioLectivoDB(colegioId, anioLectivo) {
+  try {
+    const data = await sb.rpc('abrir_anio_lectivo', {
+      p_colegio_id: colegioId,
+      p_anio_lectivo: Number(anioLectivo)
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getAsistenciasDelCursoDB(cursoId, fecha, anioLectivo, alumnoIds) {
+  const filtroCiclo = `anio_lectivo=eq.${encodeURIComponent(anioLectivo)}`;
+  const ids = [...new Set(alumnoIds || [])];
+  const [delDia, delCiclo] = await Promise.all([
+    sb.get(`asistencias?curso_id=eq.${encodeURIComponent(cursoId)}&fecha=eq.${encodeURIComponent(fecha)}&${filtroCiclo}&select=*`),
+    ids.length
+      ? sb.getTodo(`asistencias?${filtroCiclo}&alumno_id=in.(${ids.map(encodeURIComponent).join(',')})&select=alumno_id,estado&order=id.asc`)
+      : Promise.resolve([])
+  ]);
+  const totales = {};
+  delCiclo.forEach(registro => {
+    const valor = registro.estado === 'ausente' ? 1 : registro.estado === 'tarde' ? 0.25 : 0;
+    totales[registro.alumno_id] = (totales[registro.alumno_id] || 0) + valor;
+  });
+  return { delDia, totales };
+}
+
+async function guardarAsistenciaDB(datos) {
+  try {
+    const data = await sb.rpc('guardar_asistencia', {
+      p_asistencia_id: datos.id || null,
+      p_alumno_id: datos.alumnoId,
+      p_curso_id: datos.cursoId,
+      p_fecha: datos.fecha,
+      p_anio_lectivo: Number(datos.anioLectivo),
+      p_estado: datos.estado,
+      p_justificada: Boolean(datos.justificada),
+      p_motivo: datos.justificada ? datos.motivo : null,
+      p_adjuntos: datos.adjuntos || []
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function subirImagenJustificacion(asistenciaId, file) {
+  const cryptoId = window.crypto && typeof window.crypto.randomUUID === 'function'
+    ? window.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+  const nombre = `${cryptoId}.${extension}`;
+  const path = `${asistenciaId}/${nombre}`;
+  try {
+    await sb.storageUpload('asistencia-justificaciones', path, file);
+    return { ok: true, path };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getFichaAlumnoDB(alumnoId) {
+  const filtroId = encodeURIComponent(alumnoId);
+  const [alumnos, seguimientos, comentarios, asistencias] = await Promise.all([
+    sb.get(`vista_ficha_alumno?id=eq.${filtroId}&select=*`),
+    sb.getTodo(`vista_seguimientos_completa?alumno_id=eq.${filtroId}&select=*&order=creado_en.desc,id.desc`),
+    sb.getTodo(`vista_comentarios_completa?alumno_id=eq.${filtroId}&select=*&order=creado_en.desc,id.desc`),
+    sb.getTodo(`asistencias?alumno_id=eq.${filtroId}&select=*&order=anio_lectivo.desc,fecha.desc,id.desc`)
+  ]);
+  if (!alumnos.length) return null;
+  const cursoIds = [...new Set(asistencias.map(registro => registro.curso_id))];
+  if (cursoIds.length) {
+    const filtroClases = `in.(${cursoIds.map(id => `"${String(id).replace(/"/g, '\\"')}"`).join(',')})`;
+    const clases = await sb.get(`clases?id=${encodeURIComponent(filtroClases)}&select=id,anio,division`);
+    const nombresClases = new Map(clases.map(clase => [clase.id, `${clase.anio}° ${clase.division}`]));
+    asistencias.forEach(registro => {
+      registro.curso_nombre = nombresClases.get(registro.curso_id) || registro.curso_id;
+    });
+  }
+  return { ...alumnos[0], seguimientos, comentarios, asistencias };
+}
+
+async function getUrlImagenJustificacion(path) {
+  return sb.storageSignedUrl('asistencia-justificaciones', path);
+}
+
+async function eliminarImagenesJustificacion(paths) {
+  if (!paths || paths.length === 0) return { ok: true };
+  try {
+    await sb.storageRemove('asistencia-justificaciones', paths);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
 /** IDs de cursos asignados a un profesor. */
 async function getCursosDeProfesorDB(profesorId) {
   const filas = await sb.get(
@@ -729,6 +1052,176 @@ async function asignarCursosAProfesorDB(profesorId, cursoIds) {
   }
 }
 
+async function getColegiosSuperadminDB() {
+  return sb.get('colegios?select=id,nombre,sigla,activo&order=nombre.asc');
+}
+
+async function actualizarEstadoColegioSuperadminDB(colegioId, activo) {
+  try {
+    const data = await sb.patch(
+      `colegios?id=eq.${encodeURIComponent(colegioId)}`,
+      { activo }
+    );
+    if (!data || !data.length) {
+      return { ok: false, error: 'No se encontró el colegio para actualizar.' };
+    }
+    return { ok: true, data: data[0] };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getDatosColegioSuperadminDB(colegioId) {
+  const filtro = encodeURIComponent(colegioId);
+  const [clases, alumnos, profesores, preceptores, asignaciones] = await Promise.all([
+    sb.get(`clases?colegio_id=eq.${filtro}&select=*&order=anio.asc,division.asc`),
+    sb.get(`alumnos?colegio_id=eq.${filtro}&select=id,nombre,apellido,dni,legajo,curso_id,fecha_nacimiento,creado_en&order=apellido.asc`),
+    sb.get(`profesores?colegio_id=eq.${filtro}&select=id,nombre,apellido,email,materia&order=apellido.asc`),
+    sb.get(`preceptores?colegio_id=eq.${filtro}&select=id,nombre,apellido,email,dni,telefono,fecha_nacimiento&order=apellido.asc`),
+    sb.get('profesor_curso?select=profesor_id,curso_id')
+  ]);
+  const clasesPorId = new Map(clases.map(clase => [clase.id, clase]));
+  const profesoresPorId = new Map(profesores.map(profesor => [profesor.id, profesor]));
+  const preceptoresPorId = new Map(preceptores.map(preceptor => [preceptor.id, preceptor]));
+  const alumnosPorClase = new Map();
+  alumnos.forEach(alumno => alumnosPorClase.set(alumno.curso_id, (alumnosPorClase.get(alumno.curso_id) || 0) + 1));
+  const cursosPorProfesor = new Map();
+  asignaciones.forEach(({ profesor_id, curso_id }) => {
+    if (!clasesPorId.has(curso_id)) return;
+    if (!cursosPorProfesor.has(profesor_id)) cursosPorProfesor.set(profesor_id, []);
+    cursosPorProfesor.get(profesor_id).push(`${clasesPorId.get(curso_id).anio}° ${clasesPorId.get(curso_id).division}`);
+  });
+  return {
+    clases: clases.map(clase => ({
+      id: clase.id,
+      n: `${clase.anio}° ${clase.division}`,
+      nv: clase.nivel,
+      t: clase.turno,
+      a: clase.aula,
+      preceptor_id: clase.preceptor_id,
+      prec: preceptoresPorId.get(clase.preceptor_id)
+        ? `${preceptoresPorId.get(clase.preceptor_id).nombre} ${preceptoresPorId.get(clase.preceptor_id).apellido}`
+        : '—',
+      al: alumnosPorClase.get(clase.id) || 0
+    })),
+    alums: alumnos.map(alumno => {
+      const clase = clasesPorId.get(alumno.curso_id);
+      return {
+        id: alumno.id,
+        n: `${alumno.apellido}, ${alumno.nombre}`,
+        cl: clase ? `${clase.anio}° ${clase.division}` : '—',
+        dni: alumno.dni,
+        legajo: alumno.legajo,
+        fecha_nacimiento: alumno.fecha_nacimiento,
+        creado_en: alumno.creado_en,
+        curso_id: alumno.curso_id
+      };
+    }),
+    profs: profesores.map(profesor => ({
+      id: profesor.id,
+      n: `${profesor.nombre} ${profesor.apellido}`,
+      nombre: profesor.nombre,
+      apellido: profesor.apellido,
+      m: profesor.materia,
+      email: profesor.email,
+      cl: (cursosPorProfesor.get(profesor.id) || []).join(', ')
+    })),
+    preceptores: preceptores.map(preceptor => ({
+      id: preceptor.id,
+      n: `${preceptor.nombre} ${preceptor.apellido}`,
+      nombre: preceptor.nombre,
+      apellido: preceptor.apellido,
+      email: preceptor.email,
+      dni: preceptor.dni,
+      telefono: preceptor.telefono,
+      fecha_nacimiento: preceptor.fecha_nacimiento,
+      cl: clases.filter(clase => clase.preceptor_id === preceptor.id)
+        .map(clase => `${clase.anio}° ${clase.division}`).join(', ')
+    }))
+  };
+}
+
+async function crearColegioSuperadminDB(nombre, sigla) {
+  try {
+    const data = await sb.rpc('crear_colegio_superadmin', { p_nombre: nombre, p_sigla: sigla });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function getDirectivosColegioSuperadminDB(colegioId) {
+  const filtro = encodeURIComponent(colegioId);
+  const filas = await sb.get(
+    `admins?colegio_id=eq.${filtro}&select=id,email,nombre,apellido,creado_en&order=apellido.asc,nombre.asc`
+  );
+  return filas.map(directivo => ({
+    id: directivo.id,
+    nombre: `${directivo.nombre} ${directivo.apellido}`,
+    nombrePila: directivo.nombre,
+    apellido: directivo.apellido,
+    email: directivo.email,
+    desde: directivo.creado_en ? new Date(directivo.creado_en).getFullYear().toString() : ''
+  }));
+}
+
+async function crearDirectivoSuperadminDB(colegioId, datos) {
+  try {
+    const data = await sb.invoke('crear-directivo', {
+      colegio_id: colegioId,
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      email: datos.email,
+      password: datos.password
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function modificarDirectivoSuperadminDB(id, cambios) {
+  try {
+    await sb.patch(`admins?id=eq.${encodeURIComponent(id)}`, {
+      nombre: cambios.nombre,
+      apellido: cambios.apellido
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function eliminarDirectivoSuperadminDB(id) {
+  try {
+    await sb.rpc('eliminar_admin', { p_id: id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function importarColegioExcelDB(colegioId, datos) {
+  try {
+    const data = await sb.invoke('importar-colegio-excel', {
+      colegio_id: colegioId,
+      datos
+    });
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
+async function eliminarColegioSuperadminDB(colegioId) {
+  try {
+    await sb.rpc('eliminar_colegio_superadmin', { p_colegio_id: colegioId });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: _msg(e) };
+  }
+}
+
 /** Todos los seguimientos para la vista del admin (sin los de la papelera). */
 async function getTodosLosSeguimientosDB() {
   return sb.getTodo('vista_seguimientos_completa?select=*&order=creado_en.desc,id.desc');
@@ -739,7 +1232,7 @@ async function getTodosLosSeguimientosDB() {
 // ║  Helper de mensajes de error legibles                    ║
 // ╚══════════════════════════════════════════════════════════╝
 function _msg(e) {
-  if (e && e.status === 401) return 'Tu sesión expiró. Iniciá sesión de nuevo.';
+  if (e && e.status === 401 && !e.functionError) return 'Tu sesión expiró. Iniciá sesión de nuevo.';
   if (e && e.status === 0)   return e.message; // conexión/timeout
   return (e && e.message) ? e.message : 'Ocurrió un error inesperado.';
 }

@@ -281,10 +281,27 @@
     outline: none;
     transition: border-color 0.2s;
 }
+.modal-form-group select,
+.admin-ciclo-controls select {
+    color-scheme: dark;
+}
 .modal-form-group input:focus,
 .modal-form-group select:focus { border-color: var(--violet); }
-.modal-form-group select option {
+.modal-form-group select option,
+.admin-ciclo-controls select option {
     background: var(--navy-light);
+    color: var(--white);
+}
+.modal-form-group select option:hover,
+.modal-form-group select option:focus,
+.admin-ciclo-controls select option:hover,
+.admin-ciclo-controls select option:focus {
+    background: #393568;
+    color: var(--white);
+}
+.modal-form-group select option:checked,
+.admin-ciclo-controls select option:checked {
+    background: #514a9b;
     color: var(--white);
 }
 .modal-form-row {
@@ -310,6 +327,51 @@
     gap: 10px;
     justify-content: flex-end;
     margin-top: 24px;
+}
+
+.admin-ciclo-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+}
+.admin-ciclo-card h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    color: var(--white);
+}
+.admin-ciclo-card h2 span { color: var(--violet-light); }
+.admin-ciclo-card p { margin-top: 6px; color: var(--white-70); font-size: 13px; }
+.admin-ciclo-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+.admin-ciclo-controls .modal-form-group { margin: 0; min-width: 150px; }
+.admin-ciclo-controls .modal-form-group > span {
+    display: block;
+    font-size: 12px;
+    color: var(--white-70);
+    margin-bottom: 6px;
+}
+.admin-ciclo-controls input,
+.admin-ciclo-controls select {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--white);
+}
+@media (max-width: 700px) {
+    .admin-ciclo-card { flex-direction: column; }
+    .admin-ciclo-controls { width: 100%; flex-wrap: wrap; }
+    .admin-ciclo-controls .modal-form-group { flex: 1 1 150px; }
 }
 
 /* Lista de checkboxes para asignar cursos a profesor */

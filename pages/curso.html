@@ -39,6 +39,49 @@
       </div>
     </section>
 
+    <section class="asistencia-section" id="asistencia-section">
+      <div class="asistencia-header">
+        <div>
+          <h2 class="seguimientos-title">Asistencia <span id="asistencia-anio"></span></h2>
+          <p id="asistencia-ciclo-hint" class="seguimientos-hint">Cargando ciclo lectivo...</p>
+        </div>
+        <label class="asistencia-fecha">
+          <span>Fecha</span>
+          <input type="date" id="asistencia-fecha">
+        </label>
+      </div>
+      <div class="alumnos-table-wrapper">
+        <table class="alumnos-table">
+          <thead>
+            <tr>
+              <th>Alumno</th><th>Estado</th><th>Faltas del año</th>
+              <th>Justificación</th><th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="asistencia-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="comentarios-clase-section" id="comentarios-clase-section">
+      <div class="seguimientos-header">
+        <h2 class="seguimientos-title">Comentarios de <span>clase</span></h2>
+        <span class="seguimientos-hint">La visibilidad sigue las reglas de Dirección / Todos</span>
+      </div>
+      <div class="comentario-clase-form" id="comentario-clase-form">
+        <textarea id="comentario-clase-texto" maxlength="1000" placeholder="Escribí un comentario sobre esta clase..."></textarea>
+        <div class="comentario-clase-acciones">
+          <label for="comentario-clase-visibilidad">Visible para</label>
+          <select id="comentario-clase-visibilidad">
+            <option value="admin">Dirección</option>
+            <option value="profesor">Todos los docentes y preceptores asignados</option>
+          </select>
+          <button type="button" class="btn-seg" id="btn-agregar-comentario-clase">Agregar comentario</button>
+        </div>
+      </div>
+      <div id="comentarios-clase-lista" class="comentarios-clase-lista"></div>
+    </section>
+
     <!-- Sección de seguimientos -->
     <section class="seguimientos-section" id="seguimientos-section" style="display:none;">
       <div class="seguimientos-header">

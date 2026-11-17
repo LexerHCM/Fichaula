@@ -77,13 +77,13 @@
           <label class="sa-label" for="field-email">Email institucional</label>
           <input type="email" class="sa-input" id="field-email" placeholder="directivo@colegio.edu.ar" autocomplete="off">
         </div>
-        <div class="sa-field">
+        <div class="sa-field" id="field-password-container">
           <label class="sa-label" for="field-password">Contraseña temporal</label>
           <input type="password" class="sa-input" id="field-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
         </div>
         <div class="sa-modal__info" id="create-info">
-          ℹ Se creará la cuenta en <strong>Supabase Auth</strong> y se insertará el rol
-          <strong>directivo</strong> con el <strong>colegio_id</strong> correspondiente.
+          ℹ Se creará el acceso en <strong>Supabase Auth</strong> y el perfil de
+          <strong>directivo</strong> quedará asociado a este colegio.
         </div>
       </div>
       <div class="sa-modal__footer">
@@ -207,13 +207,99 @@
           <label class="sa-label" for="campo-prof-materia">Materia</label>
           <input type="text" class="sa-input" id="campo-prof-materia" placeholder="Matemática" autocomplete="off">
         </div>
+        <div id="prof-account-fields">
+          <div class="sa-form-row">
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-dni">DNI</label>
+              <input type="text" class="sa-input" id="campo-prof-dni" maxlength="12" inputmode="numeric">
+            </div>
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-fecha">Fecha de nacimiento</label>
+              <input type="date" class="sa-input" id="campo-prof-fecha">
+            </div>
+          </div>
+          <div class="sa-form-row">
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-telefono">Teléfono</label>
+              <input type="tel" class="sa-input" id="campo-prof-telefono" maxlength="30">
+            </div>
+            <div class="sa-field">
+              <label class="sa-label" for="campo-prof-password">Contraseña temporal (mínimo 8 caracteres)</label>
+              <input type="password" class="sa-input" id="campo-prof-password" minlength="8" autocomplete="new-password">
+            </div>
+          </div>
+        </div>
         <div class="sa-modal__info" id="prof-info">
-          ℹ Se creará una cuenta de profesor en el sistema. El email será usado para iniciar sesión.
+          ℹ Se creará una cuenta en Supabase Auth. Compartí la contraseña temporal por un canal seguro.
         </div>
       </div>
       <div class="sa-modal__footer">
         <button class="sa-btn sa-btn--secondary" id="btn-prof-cancel">Cancelar</button>
         <button class="sa-btn sa-btn--primary" id="btn-prof-confirm" disabled>Crear profesor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Crear Preceptor ─────────────────────────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-preceptor">
+    <div class="sa-modal">
+      <div class="sa-modal__title">Nueva cuenta de preceptor/a</div>
+      <p class="sa-modal__subtitle" id="preceptor-subtitle"></p>
+      <div class="sa-modal__body">
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-nombre">Nombre</label>
+            <input type="text" class="sa-input" id="campo-pre-nombre" maxlength="100">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-apellido">Apellido</label>
+            <input type="text" class="sa-input" id="campo-pre-apellido" maxlength="100">
+          </div>
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-dni">DNI</label>
+            <input type="text" class="sa-input" id="campo-pre-dni" maxlength="12" inputmode="numeric">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-fecha">Fecha de nacimiento</label>
+            <input type="date" class="sa-input" id="campo-pre-fecha">
+          </div>
+        </div>
+        <div class="sa-form-row">
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-telefono">Teléfono</label>
+            <input type="tel" class="sa-input" id="campo-pre-telefono" maxlength="30">
+          </div>
+          <div class="sa-field">
+            <label class="sa-label" for="campo-pre-email">Email de acceso</label>
+            <input type="email" class="sa-input" id="campo-pre-email" maxlength="254">
+          </div>
+        </div>
+        <div class="sa-field" id="campo-pre-password-wrap">
+          <label class="sa-label" for="campo-pre-password">Contraseña temporal (mínimo 8 caracteres)</label>
+          <input type="password" class="sa-input" id="campo-pre-password" minlength="8" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-pre-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--primary" id="btn-pre-confirm">Crear preceptor/a</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Confirmar eliminación de preceptor ─────────────────────── -->
+  <div class="sa-overlay hidden" id="modal-delete-preceptor">
+    <div class="sa-modal sa-modal--centered">
+      <div class="sa-modal__title">Eliminar cuenta de preceptor/a</div>
+      <p class="sa-modal__subtitle" id="delete-preceptor-name"></p>
+      <div class="sa-field">
+        <label class="sa-label" for="delete-preceptor-password">Tu contraseña actual</label>
+        <input type="password" class="sa-input" id="delete-preceptor-password" autocomplete="current-password">
+      </div>
+      <div class="sa-modal__footer">
+        <button class="sa-btn sa-btn--secondary" id="btn-pre-delete-cancel">Cancelar</button>
+        <button class="sa-btn sa-btn--danger" id="btn-pre-delete-confirm">Confirmar eliminación</button>
       </div>
     </div>
   </div>
@@ -243,8 +329,14 @@
           </div>
         </div>
         <div class="sa-field">
+          <label class="sa-label" for="campo-clase-aula">Aula</label>
+          <input type="text" class="sa-input" id="campo-clase-aula" placeholder="101" autocomplete="off">
+        </div>
+        <div class="sa-field">
           <label class="sa-label" for="campo-clase-preceptor">Preceptor/a</label>
-          <input type="text" class="sa-input" id="campo-clase-preceptor" placeholder="Nombre del preceptor" autocomplete="off">
+          <select class="sa-input" id="campo-clase-preceptor">
+            <option value="">Sin asignar</option>
+          </select>
         </div>
       </div>
       <div class="sa-modal__footer">
@@ -256,9 +348,12 @@
 
   <!-- ── Toast ──────────────────────────────────────────────────────────── -->
   <div class="sa-toast hidden" id="sa-toast"></div>
+  <input type="file" id="input-importar-excel" accept=".xlsx,.xls" hidden>
 
   <script src="../js/supabase.js"></script>
   <script src="../js/auth.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="../js/importador-excel.js"></script>
   <script src="../js/superadmin.js"></script>
 </body>
 </html>

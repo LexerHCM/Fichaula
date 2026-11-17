@@ -1,9 +1,9 @@
 /**
  * alumnos.js — Tabla global de alumnos.
- *  - admin / superadmin: todos los alumnos, con legajo y DNI
- *  - profesor: solo alumnos de sus cursos (lo filtra RLS), sin legajo ni DNI
+ *  - admin / superadmin: todos los alumnos; solo superadmin ve legajo
+ *  - profesor: solo alumnos de sus cursos (lo filtra RLS), sin identificadores
  * La búsqueda (filtros.js) acepta nombre y apellido en cualquier orden,
- * con o sin acentos, y el curso; el legajo y el DNI solo para dirección.
+ * con o sin acentos, y el curso; los identificadores según el rol.
  * Usa la vista vista_alumnos_completa (trae edad calculada).
  * Depende de: supabase.js, auth.js, components.js, filtros.js
  */
@@ -16,16 +16,21 @@
 
   const user = getUsuarioActual();
   const verLegajo = puedeVerLegajo();
+  const verDni = puedeVerDni();
 
   const sub = document.getElementById('page-subtitle');
-  sub.textContent = verLegajo
+  sub.textContent = verDni
     ? 'Listado completo de alumnos del establecimiento'
     : `Alumnos de los cursos asignados a ${user.nombre} ${user.apellido}`;
 
   const thead = document.getElementById('thead-row');
-  thead.innerHTML = verLegajo
-    ? `<th>#</th><th>Legajo</th><th>Nombre y Apellido</th><th>Curso</th><th>Turno</th><th>Edad</th><th>DNI</th>`
-    : `<th>#</th><th>Nombre y Apellido</th><th>Curso</th><th>Turno</th><th>Edad</th>`;
+  thead.innerHTML = [
+    '<th>#</th>',
+    verLegajo ? '<th>Legajo</th>' : '',
+    '<th>Nombre y Apellido</th><th>Curso</th><th>Turno</th><th>Edad</th>',
+    verDni ? '<th>DNI</th>' : '',
+    '<th>Ficha</th>'
+  ].join('');
 
   let todos = [];
 
@@ -48,7 +53,7 @@
     document.getElementById('count-label').innerHTML =
       `Mostrando <strong>${lista.length}</strong> de <strong>${todos.length}</strong> alumnos`;
 
-    const colspan = verLegajo ? 7 : 5;
+    const colspan = 6 + Number(verLegajo) + Number(verDni);
     if (lista.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${colspan}" class="no-results">No se encontraron alumnos.</td></tr>`;
       return;
@@ -68,42 +73,40 @@
                             style="color:var(--violet-light);text-decoration:none;font-size:13px;">${esc(cursoNom)}</a></td>`;
       const turno = `<td style="font-size:13px;color:var(--white-40);">${esc(a.turno)}</td>`;
       const edadCell = `<td style="font-size:13px;">${edad} años</td>`;
+      const ficha = `<td><a href="ficha-alumno.html?id=${encodeURIComponent(a.id)}&volver=alumnos" class="btn-ficha">Ver ficha</a></td>`;
 
-      if (verLegajo) {
-        return `<tr>
-          <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
-          <td><span class="legajo-badge">${esc(a.legajo)}</span></td>
-          ${nombre}${curso}${turno}${edadCell}
-          <td style="font-family:'Courier New',monospace;font-size:13px;">${esc(a.dni)}</td>
-        </tr>`;
-      }
       return `<tr>
         <td style="color:var(--white-40);font-size:13px;">${i + 1}</td>
+        ${verLegajo ? `<td><span class="legajo-badge">${esc(a.legajo)}</span></td>` : ''}
         ${nombre}${curso}${turno}${edadCell}
+        ${verDni ? `<td style="font-family:'Courier New',monospace;font-size:13px;">${esc(a.dni)}</td>` : ''}
+        ${ficha}
       </tr>`;
     }).join('');
   }
 
-  // Legajo y DNI solo se pueden buscar si el usuario puede verlos.
+  // La búsqueda respeta los permisos independientes de legajo y DNI.
   function filtrar(q) {
-    renderTabla(buscarAlumnos(todos, q, { identificadores: verLegajo }));
+    renderTabla(buscarAlumnos(todos, q, { legajo: verLegajo, dni: verDni }));
   }
 
   const buscador = document.getElementById('search-input');
   buscador.placeholder = verLegajo
     ? 'Buscar por nombre, apellido, curso, legajo o DNI...'
-    : 'Buscar por nombre, apellido o curso...';
+    : verDni
+      ? 'Buscar por nombre, apellido, curso o DNI...'
+      : 'Buscar por nombre, apellido o curso...';
   buscador.addEventListener('input', e => filtrar(e.target.value));
 
   document.getElementById('tbody').innerHTML =
-    `<tr><td colspan="${verLegajo ? 7 : 5}" class="no-results">Cargando alumnos...</td></tr>`;
+    `<tr><td colspan="${6 + Number(verLegajo) + Number(verDni)}" class="no-results">Cargando alumnos...</td></tr>`;
 
   getAlumnosVisiblesDB()
     .then(lista => { todos = lista; filtrar(buscador.value); })
     .catch(err => {
       console.error('Error al cargar alumnos:', err.message);
       document.getElementById('tbody').innerHTML =
-        `<tr><td colspan="${verLegajo ? 7 : 5}" class="no-results">
+        `<tr><td colspan="${6 + Number(verLegajo) + Number(verDni)}" class="no-results">
            No se pudieron cargar los alumnos. Revisá tu conexión.
          </td></tr>`;
     });
