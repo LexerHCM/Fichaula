@@ -1,0 +1,22 @@
+project_id = "fichaula"
+
+[functions.crear-directivo]
+verify_jwt = true
+
+[functions.crear-profesor]
+verify_jwt = true
+
+[functions.eliminar-profesor]
+verify_jwt = true
+
+[functions.crear-preceptor]
+verify_jwt = true
+
+[functions.editar-preceptor]
+verify_jwt = true
+
+[functions.eliminar-preceptor]
+verify_jwt = true
+
+[functions.eliminar-colegio]
+verify_jwt = true

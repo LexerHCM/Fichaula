@@ -1,0 +1,24 @@
+# Dependencias (npm install)
+node_modules/
+
+# Caché local de la CLI de Supabase (ID del proyecto vinculado, versión)
+supabase/.temp/
+supabase/.branches/
+
+# Variables de entorno / secretos (la clave service_role NUNCA va al repo)
+.env
+.env.*
+supabase/.env
+supabase/functions/.env
+
+# Logs y archivos del sistema / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Archivos temporales de Office (planilla abierta en Excel)
+~$*

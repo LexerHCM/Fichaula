@@ -69,7 +69,7 @@
 
 .login-card {
   background: var(--white-5);
-  border: 1px solid rgba(255,255,255,0.09);
+  border: 1px solid rgba(var(--fg-rgb),0.09);
   border-radius: 16px;
   padding: 2rem;
 }
@@ -87,8 +87,8 @@
 
 .form-group input {
   width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(var(--fg-rgb),0.06);
+  border: 1px solid rgba(var(--fg-rgb),0.12);
   border-radius: 8px;
   padding: 11px 14px;
   color: var(--white);
@@ -121,7 +121,7 @@
 .btn-login {
   width: 100%;
   background: var(--violet);
-  color: var(--white);
+  color: var(--on-accent);
   border: none;
   border-radius: 10px;
   padding: 13px;
@@ -133,7 +133,7 @@
   margin-top: 0.4rem;
 }
 .btn-login:hover:not(:disabled) {
-  background: #9791e8;
+  background: var(--violet-hover);
   transform: translateY(-1px);
 }
 .btn-login:disabled {
@@ -151,7 +151,7 @@
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 13px;
-  color: #f08080;
+  color: var(--txt-rojo);
   margin-bottom: 1rem;
   animation: fadeUp 0.3s ease;
 }
@@ -178,7 +178,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(var(--fg-rgb),0.08);
 }
 .divider span {
   font-size: 12px;
@@ -189,7 +189,7 @@
 .btn-google {
   width: 100%;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(var(--fg-rgb),0.12);
   border-radius: 10px;
   padding: 11px;
   color: var(--white-70);
@@ -204,7 +204,7 @@
   transition: border-color 0.2s, color 0.2s;
 }
 .btn-google:hover {
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(var(--fg-rgb),0.3);
   color: var(--white);
 }
 
@@ -251,14 +251,14 @@
 }
 .test-accounts .role-tag.admin {
   background: rgba(239,159,39,0.15);
-  color: #EF9F27;
+  color: var(--txt-naranja);
 }
 .test-accounts .role-tag.profe {
   background: var(--violet-dim);
   color: var(--violet-light);
 }
 .test-accounts code {
-  background: rgba(255,255,255,0.06);
+  background: rgba(var(--fg-rgb),0.06);
   padding: 1px 5px;
   border-radius: 4px;
   font-family: 'Courier New', monospace;

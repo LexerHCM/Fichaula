@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Ajustes — Fichaula</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="../js/tema.js"></script>
+</head>
+<body>
+
+  <header></header>
+
+  <main>
+    <div class="ajustes-shell">
+
+      <div class="ajustes-header">
+        <div class="badge">AJUSTES</div>
+        <h1>Mi <span>cuenta</span></h1>
+        <p>Tu perfil, la seguridad de tu acceso y tus preferencias.</p>
+      </div>
+
+      <div class="ajustes-layout">
+
+        <!-- Menú lateral de secciones -->
+        <!-- div (no <nav>): style.css estiliza "nav" como la barra superior fija -->
+        <div class="ajustes-menu" role="navigation" aria-label="Secciones de ajustes">
+          <button type="button" class="ajustes-menu__btn" data-ir="perfil">
+            <span class="ajustes-menu__icono" aria-hidden="true">👤</span> Perfil
+          </button>
+          <button type="button" class="ajustes-menu__btn" data-ir="seguridad">
+            <span class="ajustes-menu__icono" aria-hidden="true">🔒</span> Seguridad
+          </button>
+          <button type="button" class="ajustes-menu__btn" data-ir="preferencias">
+            <span class="ajustes-menu__icono" aria-hidden="true">⚙️</span> Preferencias
+          </button>
+          <button type="button" class="ajustes-menu__btn" data-ir="sesion">
+            <span class="ajustes-menu__icono" aria-hidden="true">🕑</span> Sesión y cuenta
+          </button>
+        </div>
+
+        <div class="ajustes-contenido">
+
+          <!-- ═════════════ PERFIL ═════════════ -->
+          <section class="ajustes-seccion" data-seccion="perfil" aria-labelledby="sec-perfil" hidden>
+            <h2 class="ajustes-seccion__titulo" id="sec-perfil">Perfil</h2>
+
+            <div class="ajustes-card">
+              <h3>Foto de perfil</h3>
+              <div class="ajustes-foto">
+                <div class="ajustes-avatar" id="ajustes-avatar" aria-hidden="true"></div>
+                <div>
+                  <p class="ajustes-ayuda">JPG, PNG o WEBP. Máximo 2&nbsp;MB.</p>
+                  <div class="ajustes-acciones">
+                    <button type="button" class="btn-primary" id="btn-cambiar-foto">Cambiar foto</button>
+                    <button type="button" class="btn-secondary" id="btn-quitar-foto" hidden>Quitar</button>
+                  </div>
+                  <input type="file" id="input-foto" accept="image/jpeg,image/png,image/webp" hidden>
+                </div>
+              </div>
+              <p class="ajustes-msg" id="msg-foto" role="status"></p>
+            </div>
+
+            <div class="ajustes-card">
+              <div class="ajustes-card__cabecera">
+                <h3>Datos personales</h3>
+                <button type="button" class="btn-secondary ajustes-btn-sm" id="btn-editar-datos"
+                        aria-expanded="false" aria-controls="panel-datos">Editar datos</button>
+              </div>
+
+              <dl class="ajustes-dl" id="datos-lectura">
+                <div><dt>Nombre</dt><dd id="lec-nombre">—</dd></div>
+                <div><dt>Apellido</dt><dd id="lec-apellido">—</dd></div>
+                <div><dt>Teléfono</dt><dd id="lec-telefono">—</dd></div>
+                <div><dt>Fecha de nacimiento</dt><dd id="lec-fecha">—</dd></div>
+                <div><dt>Rol</dt><dd id="lec-rol">—</dd></div>
+                <div id="lec-extra-wrap" hidden><dt id="lec-extra-label"></dt><dd id="lec-extra"></dd></div>
+              </dl>
+
+              <div class="ajustes-panel" id="panel-datos" hidden>
+                <form id="form-datos" novalidate>
+                  <div class="ajustes-row">
+                    <div class="ajustes-field">
+                      <label for="aj-nombre">Nombre</label>
+                      <input type="text" id="aj-nombre" maxlength="100" autocomplete="given-name" required>
+                    </div>
+                    <div class="ajustes-field">
+                      <label for="aj-apellido">Apellido</label>
+                      <input type="text" id="aj-apellido" maxlength="100" autocomplete="family-name" required>
+                    </div>
+                  </div>
+                  <div class="ajustes-row">
+                    <div class="ajustes-field">
+                      <label for="aj-telefono">Teléfono</label>
+                      <input type="tel" id="aj-telefono" maxlength="30" autocomplete="tel">
+                    </div>
+                    <div class="ajustes-field">
+                      <label for="aj-fecha">Fecha de nacimiento</label>
+                      <input type="date" id="aj-fecha">
+                    </div>
+                  </div>
+                  <div class="ajustes-acciones ajustes-acciones--fin">
+                    <button type="button" class="btn-secondary" data-cancelar="datos">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btn-guardar-datos">Guardar cambios</button>
+                  </div>
+                </form>
+              </div>
+              <p class="ajustes-msg" id="msg-datos" role="status"></p>
+            </div>
+          </section>
+
+          <!-- ═════════════ SEGURIDAD ═════════════ -->
+          <section class="ajustes-seccion" data-seccion="seguridad" aria-labelledby="sec-seguridad" hidden>
+            <h2 class="ajustes-seccion__titulo" id="sec-seguridad">Seguridad</h2>
+
+            <div class="ajustes-card ajustes-card--lista">
+              <!-- Email -->
+              <div class="ajustes-fila">
+                <div class="ajustes-fila__cabecera">
+                  <div>
+                    <div class="ajustes-fila__titulo">Email de acceso</div>
+                    <div class="ajustes-fila__valor" id="aj-email-actual"></div>
+                  </div>
+                  <button type="button" class="btn-secondary ajustes-btn-sm" id="btn-abrir-email"
+                          aria-expanded="false" aria-controls="panel-email">Cambiar email</button>
+                </div>
+                <div class="ajustes-panel" id="panel-email" hidden>
+                  <form id="form-email" novalidate>
+                    <div class="ajustes-field">
+                      <label for="aj-email-nuevo">Email nuevo</label>
+                      <input type="email" id="aj-email-nuevo" maxlength="254" autocomplete="email" required>
+                    </div>
+                    <div class="ajustes-field">
+                      <label for="aj-email-pass">Tu contraseña actual</label>
+                      <div class="ajustes-pass">
+                        <input type="password" id="aj-email-pass" autocomplete="current-password" required>
+                        <button type="button" class="ajustes-ojo" data-ojo="aj-email-pass" aria-label="Mostrar contraseña">👁</button>
+                      </div>
+                    </div>
+                    <div class="ajustes-acciones ajustes-acciones--fin">
+                      <button type="button" class="btn-secondary" data-cancelar="email">Cancelar</button>
+                      <button type="submit" class="btn-primary" id="btn-guardar-email">Guardar email</button>
+                    </div>
+                  </form>
+                </div>
+                <p class="ajustes-msg" id="msg-email" role="status"></p>
+              </div>
+
+              <!-- Contraseña -->
+              <div class="ajustes-fila">
+                <div class="ajustes-fila__cabecera">
+                  <div>
+                    <div class="ajustes-fila__titulo">Contraseña</div>
+                    <div class="ajustes-fila__valor" aria-label="Contraseña oculta">••••••••</div>
+                  </div>
+                  <button type="button" class="btn-secondary ajustes-btn-sm" id="btn-abrir-pass"
+                          aria-expanded="false" aria-controls="panel-pass">Cambiar contraseña</button>
+                </div>
+                <div class="ajustes-panel" id="panel-pass" hidden>
+                  <form id="form-pass" novalidate>
+                    <div class="ajustes-field">
+                      <label for="aj-pass-actual">Contraseña actual</label>
+                      <div class="ajustes-pass">
+                        <input type="password" id="aj-pass-actual" autocomplete="current-password" required>
+                        <button type="button" class="ajustes-ojo" data-ojo="aj-pass-actual" aria-label="Mostrar contraseña">👁</button>
+                      </div>
+                    </div>
+                    <div class="ajustes-row">
+                      <div class="ajustes-field">
+                        <label for="aj-pass-nueva">Contraseña nueva</label>
+                        <div class="ajustes-pass">
+                          <input type="password" id="aj-pass-nueva" minlength="8" autocomplete="new-password" required>
+                          <button type="button" class="ajustes-ojo" data-ojo="aj-pass-nueva" aria-label="Mostrar contraseña">👁</button>
+                        </div>
+                      </div>
+                      <div class="ajustes-field">
+                        <label for="aj-pass-repetir">Repetir contraseña nueva</label>
+                        <div class="ajustes-pass">
+                          <input type="password" id="aj-pass-repetir" minlength="8" autocomplete="new-password" required>
+                          <button type="button" class="ajustes-ojo" data-ojo="aj-pass-repetir" aria-label="Mostrar contraseña">👁</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="ajustes-medidor" id="medidor" data-nivel="0" aria-live="polite">
+                      <div class="ajustes-medidor__barras" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                      <span class="ajustes-medidor__texto" id="medidor-texto">Mínimo 8 caracteres.</span>
+                    </div>
+                    <div class="ajustes-acciones ajustes-acciones--fin">
+                      <button type="button" class="btn-secondary" data-cancelar="pass">Cancelar</button>
+                      <button type="submit" class="btn-primary" id="btn-guardar-pass">Guardar contraseña</button>
+                    </div>
+                  </form>
+                </div>
+                <p class="ajustes-msg" id="msg-pass" role="status"></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ═════════════ PREFERENCIAS ═════════════ -->
+          <section class="ajustes-seccion" data-seccion="preferencias" aria-labelledby="sec-pref" hidden>
+            <h2 class="ajustes-seccion__titulo" id="sec-pref">Preferencias</h2>
+            <div class="ajustes-card ajustes-card--lista">
+              <div class="ajustes-fila ajustes-switch">
+                <div>
+                  <div class="ajustes-fila__titulo" id="pref-tema-label">Tema</div>
+                  <div class="ajustes-fila__valor">Automático usa el modo claro u oscuro de tu dispositivo.</div>
+                  <div class="ajustes-fila__valor ajustes-fila__nota" id="pref-tema-sistema" hidden></div>
+                  <div class="ajustes-fila__valor ajustes-fila__nota" id="pref-tema-nota" hidden>Con la vista clásica activa se usa siempre el tema oscuro.</div>
+                </div>
+                <div class="ajustes-segmentado" id="pref-tema-grupo" role="radiogroup" aria-labelledby="pref-tema-label">
+                  <label><input type="radio" name="pref-tema" value="oscuro"> Oscuro</label>
+                  <label><input type="radio" name="pref-tema" value="claro"> Claro</label>
+                  <label><input type="radio" name="pref-tema" value="sistema"> Automático</label>
+                </div>
+              </div>
+              <label class="ajustes-fila ajustes-switch" for="pref-animaciones">
+                <div>
+                  <div class="ajustes-fila__titulo">Reducir animaciones</div>
+                  <div class="ajustes-fila__valor">Quita transiciones y efectos de movimiento.</div>
+                </div>
+                <input type="checkbox" id="pref-animaciones" role="switch">
+              </label>
+              <div class="ajustes-fila ajustes-switch">
+                <div>
+                  <div class="ajustes-fila__titulo" id="pref-texto-label">Tamaño de letra</div>
+                  <div class="ajustes-fila__valor">Agranda el texto en toda la aplicación.</div>
+                </div>
+                <div class="ajustes-segmentado" role="radiogroup" aria-labelledby="pref-texto-label">
+                  <label><input type="radio" name="pref-texto" value="normal"> Normal</label>
+                  <label><input type="radio" name="pref-texto" value="grande"> Grande</label>
+                </div>
+              </div>
+              <label class="ajustes-fila ajustes-switch" for="pref-vista-clasica" id="fila-vista-clasica" hidden>
+                <div>
+                  <div class="ajustes-fila__titulo">Vista clásica</div>
+                  <div class="ajustes-fila__valor">Usa el diseño original en el panel de superadmin y en esta página.</div>
+                </div>
+                <input type="checkbox" id="pref-vista-clasica" role="switch">
+              </label>
+              <label class="ajustes-fila ajustes-switch" for="pref-popup-asistencia" id="fila-popup-asistencia" hidden>
+                <div>
+                  <div class="ajustes-fila__titulo">Preguntar por la asistencia al entrar</div>
+                  <div class="ajustes-fila__valor">Al abrir el inicio, muestra un aviso para pasar asistencia del día. Se guarda en tu cuenta.</div>
+                </div>
+                <input type="checkbox" id="pref-popup-asistencia" role="switch" disabled>
+              </label>
+            </div>
+            <p class="ajustes-msg" id="msg-pref" role="status"></p>
+            <p class="ajustes-ayuda ajustes-ayuda--abajo" id="pref-nota-guardado">Las preferencias se guardan en este navegador.</p>
+          </section>
+
+          <!-- ═════════════ SESIÓN Y CUENTA ═════════════ -->
+          <section class="ajustes-seccion" data-seccion="sesion" aria-labelledby="sec-sesion" hidden>
+            <h2 class="ajustes-seccion__titulo" id="sec-sesion">Sesión y cuenta</h2>
+            <div class="ajustes-card">
+              <dl class="ajustes-dl">
+                <div><dt>Colegio</dt><dd id="cta-colegio">—</dd></div>
+                <div><dt>Cuenta creada</dt><dd id="cta-creada">—</dd></div>
+                <div><dt>Último ingreso</dt><dd id="cta-ultimo">—</dd></div>
+              </dl>
+              <p class="ajustes-msg" id="msg-cuenta" role="status"></p>
+            </div>
+
+            <div class="ajustes-card ajustes-card--lista">
+              <div class="ajustes-fila">
+                <div class="ajustes-fila__cabecera">
+                  <div>
+                    <div class="ajustes-fila__titulo">Cerrar sesión</div>
+                    <div class="ajustes-fila__valor">Salís solo en este dispositivo.</div>
+                  </div>
+                  <button type="button" class="btn-secondary ajustes-btn-sm" id="btn-cerrar-sesion">Cerrar sesión</button>
+                </div>
+              </div>
+              <div class="ajustes-fila">
+                <div class="ajustes-fila__cabecera">
+                  <div>
+                    <div class="ajustes-fila__titulo">Cerrar sesión en todos los dispositivos</div>
+                    <div class="ajustes-fila__valor">Útil si usaste una computadora compartida.</div>
+                  </div>
+                  <button type="button" class="btn-secondary ajustes-btn-sm ajustes-btn-peligro" id="btn-abrir-global"
+                          aria-expanded="false" aria-controls="panel-global">Cerrar en todos</button>
+                </div>
+                <div class="ajustes-panel" id="panel-global" hidden>
+                  <p class="ajustes-ayuda">Se va a cerrar tu sesión en todos los dispositivos, incluido este. ¿Continuar?</p>
+                  <div class="ajustes-acciones ajustes-acciones--fin">
+                    <button type="button" class="btn-secondary" data-cancelar="global">Cancelar</button>
+                    <button type="button" class="btn-primary ajustes-btn-peligro--lleno" id="btn-confirmar-global">Sí, cerrar en todos</button>
+                  </div>
+                </div>
+                <p class="ajustes-msg" id="msg-global" role="status"></p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <script src="../js/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/ajustes.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Cambios — Fichaula v5
+
+- Estilo visual actualizado en `superadmin.html` (con opción para volver a la vista clásica desde Ajustes).
+- Seleccionador de colegio en la pestaña de vista previa.
+- Página de ajustes creada:
+  - Permite actualizar foto de perfil, nombre, apellido, número de teléfono y fecha de nacimiento.
+  - Permite cambiar el email de acceso con correo de recuperación.
+  - Permite actualizar la contraseña.
+  - Muestra la fecha de creación de la cuenta y a qué colegio pertenece.
+  - Permite cerrar sesión en todos los dispositivos.
+  - Opciones de diseño: reducir animaciones y cambiar el tamaño de letra.
+  - Modo claro / automático (según el sistema).
+- Interfaz de seguimiento de comentarios en la ficha de preceptor arreglada.
+- Sistema de comentarios en cuentas de preceptores arreglado.
+- Sistema de asistencias renovado:
+  - Popup "¿Pasamos asistencia hoy?" al iniciar como preceptor (desactivable en Ajustes; se guarda en la cuenta).
+  - Botón "Pasar asistencia" en el inicio.
+  - Estado por curso: pendiente, parcial (x/total) o ya registrada.
+  - "Guardar todo" y atajos para marcar a todos los alumnos sin registrar.
+- Las clases pueden tener cualquier nombre (ej: "1° TEC"), en admin y superadmin.
+- Botón "Ver" en la sección de clases de `superadmin.html`: gestión completa de la clase (datos, preceptor, profesores y alumnos).
+- Limpieza: se eliminaron archivos de la v4 que ya no se usaban (`js/data.js`, `js/admin-logic.js` y una copia vieja de `superadmin.html`).
